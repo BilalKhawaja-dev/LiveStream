@@ -50,10 +50,7 @@ output "monitoring_configuration" {
   }
 }
 
-# Data sources
-data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}# Cos
-t monitoring outputs
+# Cost monitoring outputs
 output "cost_alert_topic_arn" {
   description = "SNS topic ARN for cost alerts"
   value       = aws_sns_topic.cost_alerts.arn
@@ -83,10 +80,11 @@ output "cost_optimization_function_arn" {
   value       = var.enable_cost_optimization_lambda ? aws_lambda_function.cost_optimizer[0].arn : null
 }
 
-output "anomaly_detector_arn" {
-  description = "ARN of the cost anomaly detector"
-  value       = var.enable_anomaly_detection ? aws_ce_anomaly_detector.project_anomaly_detector[0].arn : null
-}
+# Commented out due to provider version compatibility
+# output "anomaly_detector_arn" {
+#   description = "ARN of the cost anomaly detector"
+#   value       = var.enable_anomaly_detection ? aws_ce_anomaly_detector.project_anomaly_detector[0].arn : null
+# }
 
 # Cost monitoring configuration summary
 output "cost_monitoring_configuration" {
@@ -99,8 +97,9 @@ output "cost_monitoring_configuration" {
     cost_optimization_enabled = var.enable_cost_optimization_lambda
     billing_alarm_threshold = var.billing_alarm_threshold
   }
-}# Cleanup
- outputs
+}
+
+# Cleanup outputs
 output "cleanup_function_arns" {
   description = "Map of cleanup Lambda function ARNs"
   value = var.enable_automated_cleanup ? {

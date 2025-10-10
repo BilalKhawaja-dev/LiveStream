@@ -29,14 +29,9 @@ resource "aws_dynamodb_table" "log_metadata" {
   stream_enabled = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
-  # On-demand billing configuration
-  dynamic "billing_mode" {
-    for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      read_capacity  = var.read_capacity
-      write_capacity = var.write_capacity
-    }
-  }
+  # Provisioned throughput (only when billing_mode is PROVISIONED)
+  read_capacity  = var.billing_mode == "PROVISIONED" ? var.read_capacity : null
+  write_capacity = var.billing_mode == "PROVISIONED" ? var.write_capacity : null
 
   # Attributes
   attribute {
@@ -70,14 +65,8 @@ resource "aws_dynamodb_table" "log_metadata" {
     hash_key        = "service_name"
     range_key       = "timestamp"
     projection_type = "ALL"
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for log level queries
@@ -87,14 +76,8 @@ resource "aws_dynamodb_table" "log_metadata" {
     range_key       = "timestamp"
     projection_type = "INCLUDE"
     non_key_attributes = ["log_id", "service_name", "message"]
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for user-based queries
@@ -103,14 +86,8 @@ resource "aws_dynamodb_table" "log_metadata" {
     hash_key        = "user_id"
     range_key       = "timestamp"
     projection_type = "KEYS_ONLY"
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -148,14 +125,9 @@ resource "aws_dynamodb_table" "user_sessions" {
   stream_enabled = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
-  # On-demand billing configuration
-  dynamic "billing_mode" {
-    for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      read_capacity  = var.read_capacity
-      write_capacity = var.write_capacity
-    }
-  }
+  # Provisioned throughput (only when billing_mode is PROVISIONED)
+  read_capacity  = var.billing_mode == "PROVISIONED" ? var.read_capacity : null
+  write_capacity = var.billing_mode == "PROVISIONED" ? var.write_capacity : null
 
   # Attributes
   attribute {
@@ -179,14 +151,8 @@ resource "aws_dynamodb_table" "user_sessions" {
     hash_key        = "user_id"
     range_key       = "created_at"
     projection_type = "ALL"
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -223,14 +189,9 @@ resource "aws_dynamodb_table" "system_config" {
   stream_enabled = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
-  # On-demand billing configuration
-  dynamic "billing_mode" {
-    for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      read_capacity  = var.read_capacity
-      write_capacity = var.write_capacity
-    }
-  }
+  # Provisioned throughput (only when billing_mode is PROVISIONED)
+  read_capacity  = var.billing_mode == "PROVISIONED" ? var.read_capacity : null
+  write_capacity = var.billing_mode == "PROVISIONED" ? var.write_capacity : null
 
   # Attributes
   attribute {
@@ -248,14 +209,8 @@ resource "aws_dynamodb_table" "system_config" {
     name            = "EnvironmentIndex"
     hash_key        = "environment"
     projection_type = "ALL"
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -287,14 +242,9 @@ resource "aws_dynamodb_table" "audit_trail" {
   stream_enabled = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
-  # On-demand billing configuration
-  dynamic "billing_mode" {
-    for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-    content {
-      read_capacity  = var.read_capacity
-      write_capacity = var.write_capacity
-    }
-  }
+  # Provisioned throughput (only when billing_mode is PROVISIONED)
+  read_capacity  = var.billing_mode == "PROVISIONED" ? var.read_capacity : null
+  write_capacity = var.billing_mode == "PROVISIONED" ? var.write_capacity : null
 
   # Attributes
   attribute {
@@ -324,14 +274,8 @@ resource "aws_dynamodb_table" "audit_trail" {
     range_key       = "timestamp"
     projection_type = "INCLUDE"
     non_key_attributes = ["audit_id", "user_id", "resource_id"]
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for user audit queries
@@ -340,14 +284,8 @@ resource "aws_dynamodb_table" "audit_trail" {
     hash_key        = "user_id"
     range_key       = "timestamp"
     projection_type = "ALL"
-
-    dynamic "provisioned_throughput" {
-      for_each = var.billing_mode == "PROVISIONED" ? [1] : []
-      content {
-        read_capacity  = var.gsi_read_capacity
-        write_capacity = var.gsi_write_capacity
-      }
-    }
+    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -375,8 +313,8 @@ resource "aws_dynamodb_table" "audit_trail" {
     Purpose     = "audit-trail"
   }
 }
-# Clo
-udWatch Alarms for DynamoDB Monitoring
+
+# CloudWatch Alarms for DynamoDB Monitoring
 # Requirements: 4.8, 5.6
 
 # Data source for current region
@@ -659,8 +597,9 @@ resource "aws_appautoscaling_policy" "write_policy" {
     }
     target_value = var.autoscaling_write_target
   }
-}# Dynam
-oDB Backup Monitoring and Alerting
+}
+
+# DynamoDB Backup Monitoring and Alerting
 # Requirements: 3.2, 3.5, 5.1
 
 # CloudWatch Alarms for Point-in-Time Recovery Monitoring

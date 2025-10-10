@@ -180,9 +180,7 @@ output "dynamodb_endpoints" {
   }
 }
 
-# Data source for current region
-data "aws_region" "current" {}#
- Backup monitoring outputs
+# Backup monitoring outputs
 output "backup_validation_function_arn" {
   description = "ARN of the backup validation Lambda function"
   value       = var.enable_backup_validation ? aws_lambda_function.backup_validator[0].arn : null

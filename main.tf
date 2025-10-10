@@ -52,6 +52,19 @@ locals {
     Region      = local.region
   }
 }
+# VPC Module - Network infrastructure for Aurora and other services
+module "vpc" {
+  source = "./modules/vpc"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  vpc_cidr          = var.vpc_cidr
+  availability_zones = var.availability_zones
+  enable_vpc_endpoints = true
+
+  tags = local.common_tags
+}
+
 # Storage Module - S3 buckets for logs, backups, and query results
 module "storage" {
   source = "./modules/storage"
@@ -148,10 +161,17 @@ module "athena" {
 
 # Aurora Module - Serverless v2 database for log storage and analytics
 module "aurora" {
+  count  = var.enable_aurora ? 1 : 0
   source = "./modules/aurora"
 
   project_name = var.project_name
   environment  = var.environment
+
+  # VPC Configuration
+  vpc_id                    = module.vpc.vpc_id
+  database_subnet_ids       = module.vpc.database_subnet_ids
+  aurora_security_group_id  = module.vpc.aurora_security_group_id
+  aurora_subnet_group_name  = module.vpc.aurora_subnet_group_name
 
   # Serverless v2 scaling configuration
   min_capacity   = var.aurora_min_capacity
@@ -190,7 +210,7 @@ module "aurora" {
   backup_alarm_enabled              = var.aurora_backup_alarm_enabled
   backup_window_hours               = var.aurora_backup_window_hours
 
-  tags = local.common_tags
+  depends_on = [module.vpc]
 }
 
 # DynamoDB Module - NoSQL database for metadata and session management
@@ -240,8 +260,6 @@ module "dynamodb" {
   enable_backup_validation            = var.dynamodb_enable_backup_validation
   backup_validation_schedule          = var.dynamodb_backup_validation_schedule
   log_retention_days                  = var.log_retention_days
-
-  tags = local.common_tags
 }
 
 # IAM Module - Service-specific roles and user policies
@@ -264,19 +282,17 @@ module "iam" {
     module.storage.backups_bucket_id,
     module.storage.athena_results_bucket_id
   ]
-  kms_key_arns          = [
+  kms_key_arns          = concat([
     module.storage.kms_key_arn,
-    module.aurora.kms_key_arn,
     module.dynamodb.kms_key_arn
-  ]
-  kms_key_ids           = [
+  ], var.enable_aurora ? [module.aurora[0].kms_key_arn] : [])
+  kms_key_ids           = concat([
     module.storage.kms_key_id,
-    module.aurora.kms_key_id,
     module.dynamodb.kms_key_id
-  ]
+  ], var.enable_aurora ? [module.aurora[0].kms_key_id] : [])
   kinesis_firehose_arns = values(module.kinesis_firehose.delivery_stream_arns)
   dynamodb_table_arns   = values(module.dynamodb.table_arns)
-  aurora_cluster_arns   = [module.aurora.cluster_arn]
+  aurora_cluster_arns   = var.enable_aurora ? [module.aurora[0].cluster_arn] : []
   glue_catalog_arns     = [
     module.glue_catalog.glue_database_arn,
     "${module.glue_catalog.glue_database_arn}/*"
@@ -292,7 +308,7 @@ module "iam" {
   max_session_duration     = var.iam_max_session_duration
   enable_cross_account_access = var.iam_enable_cross_account_access
 
-  tags = local.common_tags
+  additional_tags = local.common_tags
 
   depends_on = [
     module.storage,
@@ -315,7 +331,7 @@ module "monitoring" {
   s3_error_logs_bucket_name        = module.storage.error_logs_bucket_id
   s3_backups_bucket_name           = module.storage.backups_bucket_id
   s3_athena_results_bucket_name    = module.storage.athena_results_bucket_id
-  aurora_cluster_id                = module.aurora.cluster_id
+  aurora_cluster_id                = var.enable_aurora ? module.aurora[0].cluster_id : ""
   dynamodb_log_metadata_table_name = module.dynamodb.log_metadata_table_name
   athena_workgroup_name            = module.athena.athena_workgroup_name
   glue_crawler_name                = module.glue_catalog.glue_crawler_name
@@ -351,11 +367,10 @@ module "monitoring" {
   s3_cleanup_schedule              = var.monitoring_s3_cleanup_schedule
   logs_cleanup_schedule            = var.monitoring_logs_cleanup_schedule
 
-  tags = local.common_tags
+  additional_tags = local.common_tags
 
   depends_on = [
     module.storage,
-    module.aurora,
     module.dynamodb,
     module.athena,
     module.glue_catalog

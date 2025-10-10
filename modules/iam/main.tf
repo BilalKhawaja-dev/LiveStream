@@ -572,8 +572,9 @@ resource "aws_iam_role_policy" "lambda_execution_policy" {
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.lambda_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}# Use
-r and Application IAM Policies
+}
+
+# User and Application IAM Policies
 # Requirements: 4.7, 5.7
 
 # Log Access Policy for Applications
@@ -902,7 +903,7 @@ resource "aws_iam_policy" "developer_access_policy" {
         ]
         Resource = var.dynamodb_table_arns
         Condition = {
-          ForAllValues:StringEquals = {
+          "ForAllValues:StringEquals" = {
             "dynamodb:Attributes" = [
               "log_id",
               "timestamp",

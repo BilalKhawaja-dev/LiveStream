@@ -115,14 +115,14 @@ output "service_role_names" {
 output "service_policy_arns" {
   description = "Map of service policy ARNs"
   value = {
-    cloudwatch_logs = aws_iam_role_policy.cloudwatch_logs_policy.arn
-    kinesis_firehose = aws_iam_role_policy.kinesis_firehose_policy.arn
-    s3_service      = aws_iam_role_policy.s3_service_policy.arn
-    aurora_service  = aws_iam_role_policy.aurora_service_policy.arn
-    dynamodb_service = aws_iam_role_policy.dynamodb_service_policy.arn
-    glue_service    = aws_iam_role_policy.glue_service_policy.arn
-    athena_service  = aws_iam_role_policy.athena_service_policy.arn
-    lambda_execution = aws_iam_role_policy.lambda_execution_policy.arn
+    cloudwatch_logs = aws_iam_role_policy.cloudwatch_logs_policy.id
+    kinesis_firehose = aws_iam_role_policy.kinesis_firehose_policy.id
+    s3_service      = aws_iam_role_policy.s3_service_policy.id
+    aurora_service  = aws_iam_role_policy.aurora_service_policy.id
+    dynamodb_service = aws_iam_role_policy.dynamodb_service_policy.id
+    glue_service    = aws_iam_role_policy.glue_service_policy.id
+    athena_service  = aws_iam_role_policy.athena_service_policy.id
+    lambda_execution = aws_iam_role_policy.lambda_execution_policy.id
   }
 }
 
@@ -137,8 +137,9 @@ output "iam_configuration_summary" {
     environment = var.environment
     project_name = var.project_name
   }
-}# User
- and Application Policy Outputs
+}
+
+# User and Application Policy Outputs
 output "user_policy_arns" {
   description = "Map of user and application policy ARNs"
   value = {

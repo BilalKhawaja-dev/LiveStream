@@ -79,13 +79,13 @@ resource "aws_iam_role_policy" "firehose_delivery_policy" {
 # Kinesis Firehose Delivery Stream for Streaming Logs
 resource "aws_kinesis_firehose_delivery_stream" "streaming_logs" {
   name        = "${var.project_name}-streaming-logs-${var.environment}"
-  destination = "s3"
+  destination = "extended_s3"
 
-  s3_configuration {
+  extended_s3_configuration {
     role_arn           = aws_iam_role.firehose_delivery_role.arn
     bucket_arn         = var.s3_bucket_arn
-    buffer_size        = var.buffer_size
-    buffer_interval    = var.buffer_interval
+    buffering_size     = var.buffer_size
+    buffering_interval = var.buffer_interval
     compression_format = var.compression_format
 
     # Partitioning by service and date for efficient querying
@@ -109,13 +109,13 @@ resource "aws_kinesis_firehose_delivery_stream" "streaming_logs" {
 # Kinesis Firehose Delivery Stream for Application Logs
 resource "aws_kinesis_firehose_delivery_stream" "application_logs" {
   name        = "${var.project_name}-application-logs-${var.environment}"
-  destination = "s3"
+  destination = "extended_s3"
 
-  s3_configuration {
+  extended_s3_configuration {
     role_arn           = aws_iam_role.firehose_delivery_role.arn
     bucket_arn         = var.s3_bucket_arn
-    buffer_size        = var.buffer_size
-    buffer_interval    = var.buffer_interval
+    buffering_size     = var.buffer_size
+    buffering_interval = var.buffer_interval
     compression_format = var.compression_format
 
     # Partitioning by service and date
@@ -139,13 +139,13 @@ resource "aws_kinesis_firehose_delivery_stream" "application_logs" {
 # Kinesis Firehose Delivery Stream for Infrastructure Logs
 resource "aws_kinesis_firehose_delivery_stream" "infrastructure_logs" {
   name        = "${var.project_name}-infrastructure-logs-${var.environment}"
-  destination = "s3"
+  destination = "extended_s3"
 
-  s3_configuration {
+  extended_s3_configuration {
     role_arn           = aws_iam_role.firehose_delivery_role.arn
     bucket_arn         = var.s3_bucket_arn
-    buffer_size        = var.buffer_size
-    buffer_interval    = var.buffer_interval
+    buffering_size     = var.buffer_size
+    buffering_interval = var.buffer_interval
     compression_format = var.compression_format
 
     # Partitioning by service and date
@@ -205,8 +205,8 @@ resource "aws_kinesis_firehose_delivery_stream" "enhanced_streaming_logs" {
   extended_s3_configuration {
     role_arn           = aws_iam_role.firehose_delivery_role.arn
     bucket_arn         = var.s3_bucket_arn
-    buffer_size        = var.buffer_size
-    buffer_interval    = var.buffer_interval
+    buffering_size     = var.buffer_size
+    buffering_interval = var.buffer_interval
     compression_format = var.compression_format
 
     # Enhanced partitioning for Athena optimization
@@ -262,8 +262,8 @@ resource "aws_kinesis_firehose_delivery_stream" "enhanced_streaming_logs" {
     s3_backup_configuration {
       role_arn           = aws_iam_role.firehose_delivery_role.arn
       bucket_arn         = var.s3_error_bucket_arn
-      buffer_size        = 5
-      buffer_interval    = 300
+      buffering_size     = 5
+      buffering_interval = 300
       compression_format = "GZIP"
       prefix             = "backup/streaming/"
 

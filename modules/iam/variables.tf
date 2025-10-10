@@ -123,8 +123,9 @@ variable "additional_tags" {
   description = "Additional tags to apply to IAM resources"
   type        = map(string)
   default     = {}
-}# U
-ser and application policy configuration
+}
+
+# User and application policy configuration
 variable "create_user_groups" {
   description = "Create IAM groups for role-based access"
   type        = bool

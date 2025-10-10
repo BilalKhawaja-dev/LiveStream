@@ -42,65 +42,65 @@ output "kinesis_firehose_delivery_stream_name" {
 # Aurora Module Outputs
 output "aurora_cluster_id" {
   description = "Aurora cluster identifier"
-  value       = module.aurora.cluster_id
+  value       = var.enable_aurora ? module.aurora[0].cluster_id : null
 }
 
 output "aurora_cluster_arn" {
   description = "Aurora cluster ARN"
-  value       = module.aurora.cluster_arn
+  value       = var.enable_aurora ? module.aurora[0].cluster_arn : null
 }
 
 output "aurora_cluster_endpoint" {
   description = "Aurora cluster writer endpoint"
-  value       = module.aurora.cluster_endpoint
+  value       = var.enable_aurora ? module.aurora[0].cluster_endpoint : null
   sensitive   = true
 }
 
 output "aurora_cluster_reader_endpoint" {
   description = "Aurora cluster reader endpoint"
-  value       = module.aurora.cluster_reader_endpoint
+  value       = var.enable_aurora ? module.aurora[0].cluster_reader_endpoint : null
   sensitive   = true
 }
 
 output "aurora_cluster_port" {
   description = "Aurora cluster port"
-  value       = module.aurora.cluster_port
+  value       = var.enable_aurora ? module.aurora[0].cluster_port : null
 }
 
 output "aurora_cluster_database_name" {
   description = "Aurora cluster database name"
-  value       = module.aurora.cluster_database_name
+  value       = var.enable_aurora ? module.aurora[0].cluster_database_name : null
 }
 
 output "aurora_instance_ids" {
   description = "Aurora instance identifiers"
-  value       = module.aurora.instance_ids
+  value       = var.enable_aurora ? module.aurora[0].instance_ids : []
 }
 
 output "aurora_kms_key_arn" {
   description = "KMS key ARN used for Aurora encryption"
-  value       = module.aurora.kms_key_arn
+  value       = var.enable_aurora ? module.aurora[0].kms_key_arn : null
 }
 
 output "aurora_secrets_manager_secret_arn" {
   description = "Secrets Manager secret ARN for Aurora master password"
-  value       = module.aurora.secrets_manager_secret_arn
+  value       = var.enable_aurora ? module.aurora[0].secrets_manager_secret_arn : null
   sensitive   = true
 }
 
 output "aurora_cloudwatch_log_groups" {
   description = "CloudWatch log group names for Aurora logs"
-  value       = module.aurora.cloudwatch_log_groups
+  value       = var.enable_aurora ? module.aurora[0].cloudwatch_log_groups : {}
 }
 
 output "aurora_backup_retention_period" {
   description = "Aurora backup retention period in days"
-  value       = module.aurora.backup_retention_period
+  value       = var.enable_aurora ? module.aurora[0].backup_retention_period : null
 }
 
 output "aurora_connection_info" {
   description = "Aurora connection information for applications"
-  value       = module.aurora.connection_info
+  value       = var.enable_aurora ? module.aurora[0].connection_info : null
   sensitive   = true
 }
 
@@ -170,17 +170,17 @@ output "athena_workgroup_configuration" {
 # VPC Outputs (will be populated by modules)
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = "" # Will be updated when VPC module is implemented
+  value       = module.vpc.vpc_id
 }
 
 output "private_subnet_ids" {
   description = "IDs of the private subnets"
-  value       = [] # Will be updated when VPC module is implemented
+  value       = module.vpc.private_subnet_ids
 }
 
 output "database_subnet_ids" {
   description = "IDs of the database subnets"
-  value       = [] # Will be updated when VPC module is implemented
+  value       = module.vpc.database_subnet_ids
 }
 
 # Storage Module Outputs
@@ -281,8 +281,9 @@ output "athena_database_name_actual" {
 output "glue_catalog_summary" {
   description = "Summary of Glue Data Catalog configuration"
   value       = module.glue_catalog.glue_catalog_summary
-}# I
-AM Module Outputs
+}
+
+# IAM Module Outputs
 output "iam_service_role_arns" {
   description = "Map of service role ARNs"
   value       = module.iam.service_role_arns
@@ -301,8 +302,9 @@ output "iam_user_group_names" {
 output "iam_configuration_summary" {
   description = "Summary of IAM configuration"
   value       = module.iam.iam_configuration_summary
-}#
- Monitoring Module Outputs
+}
+
+# Monitoring Module Outputs
 output "monitoring_dashboard_urls" {
   description = "Map of CloudWatch dashboard URLs"
   value       = module.monitoring.dashboard_urls

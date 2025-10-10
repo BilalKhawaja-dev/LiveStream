@@ -76,6 +76,12 @@ variable "aurora_instance_count" {
   default     = 1 # Development optimized (vs 2+ for prod)
 }
 
+variable "enable_aurora" {
+  description = "Enable Aurora database (disable for cost optimization in dev)"
+  type        = bool
+  default     = true
+}
+
 variable "aurora_engine_version" {
   description = "Aurora MySQL engine version"
   type        = string
@@ -441,8 +447,9 @@ variable "athena_query_execution_time_threshold_minutes" {
   description = "Threshold for Athena query execution time alarm in minutes"
   type        = number
   default     = 5 # Development optimized
-}#
- IAM Configuration
+}
+
+# IAM Configuration
 variable "iam_create_user_groups" {
   description = "Create IAM groups for role-based access"
   type        = bool
@@ -477,8 +484,9 @@ variable "iam_enable_cross_account_access" {
   description = "Enable cross-account access for roles"
   type        = bool
   default     = false
-}#
- Monitoring Configuration
+}
+
+# Monitoring Configuration
 variable "monitoring_enable_security_dashboard" {
   description = "Enable security monitoring dashboard"
   type        = bool

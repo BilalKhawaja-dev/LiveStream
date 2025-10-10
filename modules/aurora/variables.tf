@@ -174,3 +174,24 @@ variable "backup_window_hours" {
   type        = number
   default     = 2
 }
+
+# VPC Configuration
+variable "vpc_id" {
+  description = "ID of the VPC where Aurora will be deployed"
+  type        = string
+}
+
+variable "database_subnet_ids" {
+  description = "List of database subnet IDs for Aurora"
+  type        = list(string)
+}
+
+variable "aurora_security_group_id" {
+  description = "Security group ID for Aurora"
+  type        = string
+}
+
+variable "aurora_subnet_group_name" {
+  description = "DB subnet group name for Aurora"
+  type        = string
+}

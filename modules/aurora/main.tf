@@ -1,37 +1,10 @@
 # Aurora Serverless v2 Module
 # Requirements: 3.1, 4.1, 4.7, 3.5, 5.1, 4.8, 5.6
 
-# Data sources for existing resources
-data "aws_vpc" "main" {
-  filter {
-    name   = "tag:Name"
-    values = ["${var.project_name}-${var.environment}-vpc"]
-  }
-}
+# Aurora module now receives VPC information from the VPC module
+# No need for data sources since VPC info is passed as variables
 
-data "aws_subnets" "database" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.main.id]
-  }
-  
-  filter {
-    name   = "tag:Type"
-    values = ["database"]
-  }
-}
-
-data "aws_security_groups" "database" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.main.id]
-  }
-  
-  filter {
-    name   = "tag:Name"
-    values = ["${var.project_name}-${var.environment}-database-sg"]
-  }
-}
+# Security group is passed as a variable from the VPC module
 
 # KMS key for Aurora encryption
 resource "aws_kms_key" "aurora" {
@@ -55,7 +28,7 @@ resource "aws_kms_alias" "aurora" {
 # DB subnet group for Aurora
 resource "aws_db_subnet_group" "aurora" {
   name       = "${var.project_name}-${var.environment}-aurora-subnet-group"
-  subnet_ids = data.aws_subnets.database.ids
+  subnet_ids = var.database_subnet_ids
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-aurora-subnet-group"
@@ -115,7 +88,7 @@ resource "aws_rds_cluster" "aurora" {
   # Security and encryption
   storage_encrypted              = true
   kms_key_id                    = aws_kms_key.aurora.arn
-  vpc_security_group_ids        = data.aws_security_groups.database.ids
+  vpc_security_group_ids        = [var.aurora_security_group_id]
   db_subnet_group_name          = aws_db_subnet_group.aurora.name
   
   # Serverless v2 scaling configuration
@@ -239,8 +212,8 @@ resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
   role       = aws_iam_role.rds_enhanced_monitoring[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }
-# 
-CloudWatch Alarms for Aurora Monitoring
+
+# CloudWatch Alarms for Aurora Monitoring
 # Requirements: 4.8, 5.6
 
 # SNS topic for Aurora alarms (if not provided)

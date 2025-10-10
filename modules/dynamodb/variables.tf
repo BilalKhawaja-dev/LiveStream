@@ -233,8 +233,9 @@ variable "autoscaling_max_write_capacity" {
   description = "Maximum write capacity for auto-scaling"
   type        = number
   default     = 100
-}# Backu
-p monitoring and validation configuration
+}
+
+# Backup monitoring and validation configuration
 variable "backup_storage_threshold_bytes" {
   description = "Backup storage usage threshold in bytes for alarms"
   type        = number

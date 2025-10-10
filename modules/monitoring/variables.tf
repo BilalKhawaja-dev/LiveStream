@@ -96,8 +96,9 @@ variable "additional_tags" {
   description = "Additional tags to apply to monitoring resources"
   type        = map(string)
   default     = {}
-}# Cost
- monitoring and budget configuration
+}
+
+# Cost monitoring and budget configuration
 variable "monthly_budget_limit" {
   description = "Monthly budget limit in USD"
   type        = number
@@ -186,8 +187,9 @@ variable "cost_optimization_schedule" {
   description = "Schedule expression for cost optimization analysis"
   type        = string
   default     = "rate(7 days)"  # Weekly analysis
-}# A
-utomated cleanup configuration
+}
+
+# Automated cleanup configuration
 variable "enable_automated_cleanup" {
   description = "Enable automated cleanup procedures"
   type        = bool

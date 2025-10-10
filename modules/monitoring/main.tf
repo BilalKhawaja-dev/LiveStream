@@ -122,13 +122,6 @@ resource "aws_cloudwatch_dashboard" "infrastructure_overview" {
       }
     ]
   })
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-infrastructure-overview"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "dashboard"
-  }
 }
 
 # Log Pipeline Health Dashboard
@@ -193,13 +186,6 @@ resource "aws_cloudwatch_dashboard" "log_pipeline_health" {
       }
     ]
   })
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-log-pipeline-health"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "dashboard"
-  }
 }
 
 # Cost Monitoring Dashboard
@@ -311,13 +297,6 @@ resource "aws_cloudwatch_dashboard" "cost_monitoring" {
       }
     ]
   })
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-cost-monitoring"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "dashboard"
-  }
 }
 
 # Query Performance Dashboard
@@ -383,13 +362,6 @@ resource "aws_cloudwatch_dashboard" "query_performance" {
       }
     ]
   })
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-query-performance"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "dashboard"
-  }
 }
 
 # Security Monitoring Dashboard
@@ -451,15 +423,9 @@ resource "aws_cloudwatch_dashboard" "security_monitoring" {
       }
     ]
   })
+}
 
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-security-monitoring"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "dashboard"
-  }
-}# Cost M
-onitoring and Budget Alerts
+# Cost Monitoring and Budget Alerts
 # Requirements: 5.1, 5.6, 5.8
 
 # SNS topic for cost alerts
@@ -484,11 +450,14 @@ resource "aws_budgets_budget" "project_budget" {
   time_unit    = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
-  cost_filters = {
-    Tag = [
-      "Project:${var.project_name}",
-      "Environment:${var.environment}"
-    ]
+  cost_filter {
+    name   = "TagKey"
+    values = ["Project"]
+  }
+  
+  cost_filter {
+    name   = "TagKey" 
+    values = ["Environment"]
   }
 
   notification {
@@ -537,12 +506,19 @@ resource "aws_budgets_budget" "s3_budget" {
   time_unit    = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
-  cost_filters = {
-    Service = ["Amazon Simple Storage Service"]
-    Tag = [
-      "Project:${var.project_name}",
-      "Environment:${var.environment}"
-    ]
+  cost_filter {
+    name   = "Service"
+    values = ["Amazon Simple Storage Service"]
+  }
+  
+  cost_filter {
+    name   = "TagKey"
+    values = ["Project"]
+  }
+  
+  cost_filter {
+    name   = "TagKey"
+    values = ["Environment"]
   }
 
   notification {
@@ -572,12 +548,19 @@ resource "aws_budgets_budget" "rds_budget" {
   time_unit    = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
-  cost_filters = {
-    Service = ["Amazon Relational Database Service"]
-    Tag = [
-      "Project:${var.project_name}",
-      "Environment:${var.environment}"
-    ]
+  cost_filter {
+    name   = "Service"
+    values = ["Amazon Relational Database Service"]
+  }
+  
+  cost_filter {
+    name   = "TagKey"
+    values = ["Project"]
+  }
+  
+  cost_filter {
+    name   = "TagKey"
+    values = ["Environment"]
   }
 
   notification {
@@ -713,66 +696,66 @@ resource "aws_cloudwatch_metric_alarm" "data_transfer_costs" {
   }
 }
 
-# Cost anomaly detection
-resource "aws_ce_anomaly_detector" "project_anomaly_detector" {
-  count = var.enable_anomaly_detection ? 1 : 0
-  
-  name         = "${var.project_name}-${var.environment}-cost-anomaly-detector"
-  monitor_type = "DIMENSIONAL"
+# Cost anomaly detection - Commented out due to provider version compatibility
+# resource "aws_ce_anomaly_detector" "project_anomaly_detector" {
+#   count = var.enable_anomaly_detection ? 1 : 0
+#   
+#   name         = "${var.project_name}-${var.environment}-cost-anomaly-detector"
+#   monitor_type = "DIMENSIONAL"
+#
+#   specification = jsonencode({
+#     Dimension = "SERVICE"
+#     MatchOptions = ["EQUALS"]
+#     Values = [
+#       "Amazon Simple Storage Service",
+#       "Amazon Relational Database Service",
+#       "Amazon DynamoDB",
+#       "Amazon Athena",
+#       "AWS Glue",
+#       "Amazon Kinesis Firehose"
+#     ]
+#   })
+#
+#   tags = {
+#     Name        = "${var.project_name}-${var.environment}-cost-anomaly-detector"
+#     Environment = var.environment
+#     Project     = var.project_name
+#     Type        = "anomaly-detection"
+#   }
+# }
 
-  specification = jsonencode({
-    Dimension = "SERVICE"
-    MatchOptions = ["EQUALS"]
-    Values = [
-      "Amazon Simple Storage Service",
-      "Amazon Relational Database Service",
-      "Amazon DynamoDB",
-      "Amazon Athena",
-      "AWS Glue",
-      "Amazon Kinesis Firehose"
-    ]
-  })
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-cost-anomaly-detector"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "anomaly-detection"
-  }
-}
-
-resource "aws_ce_anomaly_subscription" "project_anomaly_subscription" {
-  count = var.enable_anomaly_detection ? 1 : 0
-  
-  name      = "${var.project_name}-${var.environment}-cost-anomaly-subscription"
-  frequency = "DAILY"
-  
-  monitor_arn_list = [
-    aws_ce_anomaly_detector.project_anomaly_detector[0].arn
-  ]
-  
-  subscriber {
-    type    = "EMAIL"
-    address = var.anomaly_detection_email
-  }
-
-  threshold_expression {
-    and {
-      dimension {
-        key           = "ANOMALY_TOTAL_IMPACT_ABSOLUTE"
-        values        = [tostring(var.anomaly_threshold_amount)]
-        match_options = ["GREATER_THAN_OR_EQUAL"]
-      }
-    }
-  }
-
-  tags = {
-    Name        = "${var.project_name}-${var.environment}-cost-anomaly-subscription"
-    Environment = var.environment
-    Project     = var.project_name
-    Type        = "anomaly-subscription"
-  }
-}
+# resource "aws_ce_anomaly_subscription" "project_anomaly_subscription" {
+#   count = var.enable_anomaly_detection ? 1 : 0
+#   
+#   name      = "${var.project_name}-${var.environment}-cost-anomaly-subscription"
+#   frequency = "DAILY"
+#   
+#   monitor_arn_list = [
+#     aws_ce_anomaly_detector.project_anomaly_detector[0].arn
+#   ]
+#   
+#   subscriber {
+#     type    = "EMAIL"
+#     address = var.anomaly_detection_email
+#   }
+#
+#   threshold_expression {
+#     and {
+#       dimension {
+#         key           = "ANOMALY_TOTAL_IMPACT_ABSOLUTE"
+#         values        = [tostring(var.anomaly_threshold_amount)]
+#         match_options = ["GREATER_THAN_OR_EQUAL"]
+#       }
+#     }
+#   }
+#
+#   tags = {
+#     Name        = "${var.project_name}-${var.environment}-cost-anomaly-subscription"
+#     Environment = var.environment
+#     Project     = var.project_name
+#     Type        = "anomaly-subscription"
+#   }
+# }
 
 # Lambda function for cost optimization recommendations
 resource "aws_iam_role" "cost_optimizer_role" {
@@ -969,17 +952,17 @@ def handler(event, context):
         # Analyze S3 costs and recommend lifecycle policies
         s3_cost = service_costs.get('Amazon Simple Storage Service', 0)
         if s3_cost > budget_limit * 0.3:  # More than 30% of budget
-            recommendations.append(f"S3 costs are ${s3_cost:.2f} (high). Consider implementing more aggressive lifecycle policies.")
+            recommendations.append(f"S3 costs are $${s3_cost:.2f} (high). Consider implementing more aggressive lifecycle policies.")
         
         # Analyze RDS costs and recommend right-sizing
         rds_cost = service_costs.get('Amazon Relational Database Service', 0)
         if rds_cost > budget_limit * 0.4:  # More than 40% of budget
-            recommendations.append(f"RDS costs are ${rds_cost:.2f} (high). Consider Aurora Serverless v2 scaling optimization.")
+            recommendations.append(f"RDS costs are $${rds_cost:.2f} (high). Consider Aurora Serverless v2 scaling optimization.")
         
         # Analyze Athena costs
         athena_cost = service_costs.get('Amazon Athena', 0)
         if athena_cost > budget_limit * 0.1:  # More than 10% of budget
-            recommendations.append(f"Athena costs are ${athena_cost:.2f} (high). Review query patterns and partition strategies.")
+            recommendations.append(f"Athena costs are $${athena_cost:.2f} (high). Review query patterns and partition strategies.")
         
         # Check if total cost is approaching budget
         budget_utilization = (total_cost / budget_limit) * 100
@@ -989,7 +972,7 @@ def handler(event, context):
         # Generate recommendations message
         if recommendations:
             message = f"Cost Optimization Recommendations for {project_name} {environment}:\\n\\n"
-            message += f"Current monthly cost: ${total_cost:.2f} ({budget_utilization:.1f}% of ${budget_limit:.2f} budget)\\n\\n"
+            message += f"Current monthly cost: $${total_cost:.2f} ({budget_utilization:.1f}% of $${budget_limit:.2f} budget)\\n\\n"
             message += "Recommendations:\\n"
             for i, rec in enumerate(recommendations, 1):
                 message += f"{i}. {rec}\\n"
@@ -997,7 +980,7 @@ def handler(event, context):
             message += "\\nTop service costs:\\n"
             sorted_costs = sorted(service_costs.items(), key=lambda x: x[1], reverse=True)[:5]
             for service, cost in sorted_costs:
-                message += f"- {service}: ${cost:.2f}\\n"
+                message += f"- {service}: $${cost:.2f}\\n"
             
             # Send SNS notification
             sns_client.publish(
@@ -1071,8 +1054,9 @@ resource "aws_lambda_permission" "allow_cloudwatch_cost_optimization" {
   function_name = aws_lambda_function.cost_optimizer[0].function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.cost_optimization_schedule[0].arn
-}#
- Automated Cleanup Procedures
+}
+
+# Automated Cleanup Procedures
 # Requirements: 4.5, 5.8
 
 # IAM role for cleanup Lambda functions
