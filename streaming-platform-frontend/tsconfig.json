@@ -6,7 +6,6 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -19,21 +18,13 @@
     "paths": {
       "@streaming/shared/*": ["packages/shared/src/*"],
       "@streaming/ui/*": ["packages/ui/src/*"],
-      "@streaming/auth/*": ["packages/auth/src/*"],
-      "@streaming/api/*": ["packages/api/src/*"]
+      "@streaming/auth/*": ["packages/auth/src/*"]
     }
   },
-  "include": ["apps/*/src", "packages/*/src"],
+  "include": ["packages/*/src"],
   "references": [
-    { "path": "./apps/viewer-portal" },
-    { "path": "./apps/creator-dashboard" },
-    { "path": "./apps/admin-portal" },
-    { "path": "./apps/support-system" },
-    { "path": "./apps/analytics-dashboard" },
-    { "path": "./apps/developer-console" },
     { "path": "./packages/shared" },
     { "path": "./packages/ui" },
-    { "path": "./packages/auth" },
-    { "path": "./packages/api" }
+    { "path": "./packages/auth" }
   ]
 }

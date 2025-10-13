@@ -1,7 +1,7 @@
 {
   "name": "@streaming/auth",
   "version": "1.0.0",
-  "description": "Authentication service for streaming platform",
+  "description": "Authentication and authorization for streaming platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -12,14 +12,16 @@
   },
   "dependencies": {
     "@aws-amplify/auth": "^5.6.5",
-    "@aws-amplify/core": "^5.8.5",
     "aws-amplify": "^5.3.11",
-    "@streaming/shared": "1.0.0"
+    "jwt-decode": "^3.1.2"
   },
   "devDependencies": {
+    "@types/jwt-decode": "^3.1.0",
+    "@types/react": "^18.2.15",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "react": "^18.2.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }

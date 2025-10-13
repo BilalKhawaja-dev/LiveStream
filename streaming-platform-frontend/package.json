@@ -4,7 +4,6 @@
   "description": "Live streaming platform frontend suite with 6 interconnected applications",
   "private": true,
   "workspaces": [
-    "apps/*",
     "packages/*"
   ],
   "scripts": {
