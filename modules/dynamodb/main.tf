@@ -22,11 +22,11 @@ resource "aws_kms_alias" "dynamodb" {
 
 # DynamoDB table for log metadata and indexing
 resource "aws_dynamodb_table" "log_metadata" {
-  name           = "${var.project_name}-${var.environment}-log-metadata"
-  billing_mode   = var.billing_mode
-  hash_key       = "log_id"
-  range_key      = "timestamp"
-  stream_enabled = var.enable_streams
+  name             = "${var.project_name}-${var.environment}-log-metadata"
+  billing_mode     = var.billing_mode
+  hash_key         = "log_id"
+  range_key        = "timestamp"
+  stream_enabled   = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
   # Provisioned throughput (only when billing_mode is PROVISIONED)
@@ -65,19 +65,19 @@ resource "aws_dynamodb_table" "log_metadata" {
     hash_key        = "service_name"
     range_key       = "timestamp"
     projection_type = "ALL"
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity   = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for log level queries
   global_secondary_index {
-    name            = "LogLevelIndex"
-    hash_key        = "log_level"
-    range_key       = "timestamp"
-    projection_type = "INCLUDE"
+    name               = "LogLevelIndex"
+    hash_key           = "log_level"
+    range_key          = "timestamp"
+    projection_type    = "INCLUDE"
     non_key_attributes = ["log_id", "service_name", "message"]
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity      = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity     = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for user-based queries
@@ -86,8 +86,8 @@ resource "aws_dynamodb_table" "log_metadata" {
     hash_key        = "user_id"
     range_key       = "timestamp"
     projection_type = "KEYS_ONLY"
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity   = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -118,11 +118,11 @@ resource "aws_dynamodb_table" "log_metadata" {
 
 # DynamoDB table for user session tracking
 resource "aws_dynamodb_table" "user_sessions" {
-  name           = "${var.project_name}-${var.environment}-user-sessions"
-  billing_mode   = var.billing_mode
-  hash_key       = "session_id"
-  range_key      = "user_id"
-  stream_enabled = var.enable_streams
+  name             = "${var.project_name}-${var.environment}-user-sessions"
+  billing_mode     = var.billing_mode
+  hash_key         = "session_id"
+  range_key        = "user_id"
+  stream_enabled   = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
   # Provisioned throughput (only when billing_mode is PROVISIONED)
@@ -151,8 +151,8 @@ resource "aws_dynamodb_table" "user_sessions" {
     hash_key        = "user_id"
     range_key       = "created_at"
     projection_type = "ALL"
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity   = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -183,10 +183,10 @@ resource "aws_dynamodb_table" "user_sessions" {
 
 # DynamoDB table for system configuration and feature flags
 resource "aws_dynamodb_table" "system_config" {
-  name           = "${var.project_name}-${var.environment}-system-config"
-  billing_mode   = var.billing_mode
-  hash_key       = "config_key"
-  stream_enabled = var.enable_streams
+  name             = "${var.project_name}-${var.environment}-system-config"
+  billing_mode     = var.billing_mode
+  hash_key         = "config_key"
+  stream_enabled   = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
   # Provisioned throughput (only when billing_mode is PROVISIONED)
@@ -209,8 +209,8 @@ resource "aws_dynamodb_table" "system_config" {
     name            = "EnvironmentIndex"
     hash_key        = "environment"
     projection_type = "ALL"
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity   = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -235,11 +235,11 @@ resource "aws_dynamodb_table" "system_config" {
 
 # DynamoDB table for audit trail and compliance
 resource "aws_dynamodb_table" "audit_trail" {
-  name           = "${var.project_name}-${var.environment}-audit-trail"
-  billing_mode   = var.billing_mode
-  hash_key       = "audit_id"
-  range_key      = "timestamp"
-  stream_enabled = var.enable_streams
+  name             = "${var.project_name}-${var.environment}-audit-trail"
+  billing_mode     = var.billing_mode
+  hash_key         = "audit_id"
+  range_key        = "timestamp"
+  stream_enabled   = var.enable_streams
   stream_view_type = var.enable_streams ? "NEW_AND_OLD_IMAGES" : null
 
   # Provisioned throughput (only when billing_mode is PROVISIONED)
@@ -269,13 +269,13 @@ resource "aws_dynamodb_table" "audit_trail" {
 
   # Global Secondary Index for action type queries
   global_secondary_index {
-    name            = "ActionTypeIndex"
-    hash_key        = "action_type"
-    range_key       = "timestamp"
-    projection_type = "INCLUDE"
+    name               = "ActionTypeIndex"
+    hash_key           = "action_type"
+    range_key          = "timestamp"
+    projection_type    = "INCLUDE"
     non_key_attributes = ["audit_id", "user_id", "resource_id"]
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity      = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity     = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Global Secondary Index for user audit queries
@@ -284,8 +284,8 @@ resource "aws_dynamodb_table" "audit_trail" {
     hash_key        = "user_id"
     range_key       = "timestamp"
     projection_type = "ALL"
-    read_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
-    write_capacity = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
+    read_capacity   = var.billing_mode == "PROVISIONED" ? var.gsi_read_capacity : null
+    write_capacity  = var.billing_mode == "PROVISIONED" ? var.gsi_write_capacity : null
   }
 
   # Server-side encryption
@@ -323,9 +323,9 @@ data "aws_region" "current" {}
 # SNS topic for DynamoDB alarms (if not provided)
 resource "aws_sns_topic" "dynamodb_alarms" {
   count = var.enable_cloudwatch_alarms && var.sns_topic_arn == "" ? 1 : 0
-  
-  name         = "${var.project_name}-${var.environment}-dynamodb-alarms"
-  display_name = "DynamoDB Table Alarms"
+
+  name              = "${var.project_name}-${var.environment}-dynamodb-alarms"
+  display_name      = "DynamoDB Table Alarms"
   kms_master_key_id = aws_kms_key.dynamodb.arn
 
   tags = {
@@ -338,7 +338,7 @@ resource "aws_sns_topic" "dynamodb_alarms" {
 
 locals {
   sns_topic_arn = var.sns_topic_arn != "" ? var.sns_topic_arn : (var.enable_cloudwatch_alarms ? aws_sns_topic.dynamodb_alarms[0].arn : "")
-  
+
   # List of all tables for monitoring
   tables = {
     log_metadata  = aws_dynamodb_table.log_metadata
@@ -351,7 +351,7 @@ locals {
 # Read Throttle Alarms
 resource "aws_cloudwatch_metric_alarm" "read_throttle" {
   for_each = var.enable_cloudwatch_alarms ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-read-throttle"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -381,7 +381,7 @@ resource "aws_cloudwatch_metric_alarm" "read_throttle" {
 # Write Throttle Alarms
 resource "aws_cloudwatch_metric_alarm" "write_throttle" {
   for_each = var.enable_cloudwatch_alarms ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-write-throttle"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -411,7 +411,7 @@ resource "aws_cloudwatch_metric_alarm" "write_throttle" {
 # Consumed Read Capacity Alarms (for provisioned tables)
 resource "aws_cloudwatch_metric_alarm" "consumed_read_capacity" {
   for_each = var.enable_cloudwatch_alarms && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-consumed-read-capacity"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -441,7 +441,7 @@ resource "aws_cloudwatch_metric_alarm" "consumed_read_capacity" {
 # Consumed Write Capacity Alarms (for provisioned tables)
 resource "aws_cloudwatch_metric_alarm" "consumed_write_capacity" {
   for_each = var.enable_cloudwatch_alarms && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-consumed-write-capacity"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -471,7 +471,7 @@ resource "aws_cloudwatch_metric_alarm" "consumed_write_capacity" {
 # System Error Alarms
 resource "aws_cloudwatch_metric_alarm" "system_errors" {
   for_each = var.enable_cloudwatch_alarms ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-system-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -501,7 +501,7 @@ resource "aws_cloudwatch_metric_alarm" "system_errors" {
 # User Error Alarms
 resource "aws_cloudwatch_metric_alarm" "user_errors" {
   for_each = var.enable_cloudwatch_alarms ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-user-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "3"
@@ -531,7 +531,7 @@ resource "aws_cloudwatch_metric_alarm" "user_errors" {
 # Auto-scaling configuration (for provisioned billing mode)
 resource "aws_appautoscaling_target" "read_target" {
   for_each = var.enable_autoscaling && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   max_capacity       = var.autoscaling_max_read_capacity
   min_capacity       = var.autoscaling_min_read_capacity
   resource_id        = "table/${each.value.name}"
@@ -549,7 +549,7 @@ resource "aws_appautoscaling_target" "read_target" {
 
 resource "aws_appautoscaling_policy" "read_policy" {
   for_each = var.enable_autoscaling && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   name               = "${var.project_name}-${var.environment}-${each.key}-read-scaling-policy"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.read_target[each.key].resource_id
@@ -566,7 +566,7 @@ resource "aws_appautoscaling_policy" "read_policy" {
 
 resource "aws_appautoscaling_target" "write_target" {
   for_each = var.enable_autoscaling && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   max_capacity       = var.autoscaling_max_write_capacity
   min_capacity       = var.autoscaling_min_write_capacity
   resource_id        = "table/${each.value.name}"
@@ -584,7 +584,7 @@ resource "aws_appautoscaling_target" "write_target" {
 
 resource "aws_appautoscaling_policy" "write_policy" {
   for_each = var.enable_autoscaling && var.billing_mode == "PROVISIONED" ? local.tables : {}
-  
+
   name               = "${var.project_name}-${var.environment}-${each.key}-write-scaling-policy"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.write_target[each.key].resource_id
@@ -605,7 +605,7 @@ resource "aws_appautoscaling_policy" "write_policy" {
 # CloudWatch Alarms for Point-in-Time Recovery Monitoring
 resource "aws_cloudwatch_metric_alarm" "backup_lag" {
   for_each = var.enable_cloudwatch_alarms && var.enable_point_in_time_recovery ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-backup-lag"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -613,7 +613,7 @@ resource "aws_cloudwatch_metric_alarm" "backup_lag" {
   namespace           = "AWS/DynamoDB"
   period              = "300"
   statistic           = "Maximum"
-  threshold           = 300  # 5 minutes lag threshold
+  threshold           = 300 # 5 minutes lag threshold
   alarm_description   = "This metric monitors DynamoDB point-in-time recovery lag for ${each.key}"
   alarm_actions       = [local.sns_topic_arn]
   ok_actions          = [local.sns_topic_arn]
@@ -636,13 +636,13 @@ resource "aws_cloudwatch_metric_alarm" "backup_lag" {
 # CloudWatch Alarms for Backup Storage Usage
 resource "aws_cloudwatch_metric_alarm" "backup_storage_usage" {
   for_each = var.enable_cloudwatch_alarms && var.enable_point_in_time_recovery ? local.tables : {}
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-${each.key}-backup-storage-usage"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
   metric_name         = "BackupSizeBytes"
   namespace           = "AWS/DynamoDB"
-  period              = "86400"  # Daily check
+  period              = "86400" # Daily check
   statistic           = "Maximum"
   threshold           = var.backup_storage_threshold_bytes
   alarm_description   = "This metric monitors DynamoDB backup storage usage for ${each.key}"
@@ -666,7 +666,7 @@ resource "aws_cloudwatch_metric_alarm" "backup_storage_usage" {
 # Lambda function for backup validation and reporting
 resource "aws_iam_role" "backup_validator_role" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-dynamodb-backup-validator-role"
 
   assume_role_policy = jsonencode({
@@ -693,7 +693,7 @@ resource "aws_iam_role" "backup_validator_role" {
 
 resource "aws_iam_role_policy" "backup_validator_policy" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-dynamodb-backup-validator-policy"
   role = aws_iam_role.backup_validator_role[0].id
 
@@ -742,21 +742,21 @@ resource "aws_iam_role_policy" "backup_validator_policy" {
 # Lambda function for backup validation
 resource "aws_lambda_function" "backup_validator" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   filename         = data.archive_file.backup_validator_zip[0].output_path
   function_name    = "${var.project_name}-${var.environment}-dynamodb-backup-validator"
-  role            = aws_iam_role.backup_validator_role[0].arn
-  handler         = "index.handler"
+  role             = aws_iam_role.backup_validator_role[0].arn
+  handler          = "index.handler"
   source_code_hash = data.archive_file.backup_validator_zip[0].output_base64sha256
-  runtime         = "python3.9"
-  timeout         = 300
+  runtime          = "python3.9"
+  timeout          = 300
 
   environment {
     variables = {
-      TABLE_NAMES = jsonencode([for k, v in local.tables : v.name])
+      TABLE_NAMES   = jsonencode([for k, v in local.tables : v.name])
       SNS_TOPIC_ARN = local.sns_topic_arn
-      ENVIRONMENT = var.environment
-      PROJECT_NAME = var.project_name
+      ENVIRONMENT   = var.environment
+      PROJECT_NAME  = var.project_name
     }
   }
 
@@ -772,9 +772,9 @@ resource "aws_lambda_function" "backup_validator" {
 # Lambda function source code
 resource "local_file" "backup_validator_source" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   filename = "${path.module}/backup_validator.py"
-  content = <<EOF
+  content  = <<EOF
 import json
 import boto3
 import os
@@ -890,18 +890,18 @@ EOF
 # Create ZIP file for Lambda deployment
 data "archive_file" "backup_validator_zip" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   type        = "zip"
   source_file = local_file.backup_validator_source[0].filename
   output_path = "${path.module}/backup_validator.zip"
-  
+
   depends_on = [local_file.backup_validator_source]
 }
 
 # CloudWatch Event Rule for scheduled backup validation
 resource "aws_cloudwatch_event_rule" "backup_validation_schedule" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   name                = "${var.project_name}-${var.environment}-dynamodb-backup-validation"
   description         = "Trigger DynamoDB backup validation"
   schedule_expression = var.backup_validation_schedule
@@ -917,7 +917,7 @@ resource "aws_cloudwatch_event_rule" "backup_validation_schedule" {
 
 resource "aws_cloudwatch_event_target" "backup_validation_target" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   rule      = aws_cloudwatch_event_rule.backup_validation_schedule[0].name
   target_id = "DynamoDBBackupValidationTarget"
   arn       = aws_lambda_function.backup_validator[0].arn
@@ -925,7 +925,7 @@ resource "aws_cloudwatch_event_target" "backup_validation_target" {
 
 resource "aws_lambda_permission" "allow_cloudwatch_backup_validation" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.backup_validator[0].function_name
@@ -936,7 +936,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_backup_validation" {
 # CloudWatch Log Group for backup validator Lambda
 resource "aws_cloudwatch_log_group" "backup_validator_logs" {
   count = var.enable_backup_validation ? 1 : 0
-  
+
   name              = "/aws/lambda/${aws_lambda_function.backup_validator[0].function_name}"
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.dynamodb.arn
@@ -947,5 +947,115 @@ resource "aws_cloudwatch_log_group" "backup_validator_logs" {
     Project     = var.project_name
     Service     = "dynamodb"
     Type        = "backup-validation"
+  }
+}
+
+# Additional tables for streaming platform
+resource "aws_dynamodb_table" "connections" {
+  name         = "${var.project_name}-${var.environment}-connections"
+  billing_mode = var.billing_mode
+  hash_key     = "connection_id"
+
+  attribute {
+    name = "connection_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-connections"
+  }
+}
+
+resource "aws_dynamodb_table" "messages" {
+  name         = "${var.project_name}-${var.environment}-messages"
+  billing_mode = var.billing_mode
+  hash_key     = "stream_id"
+  range_key    = "timestamp"
+
+  attribute {
+    name = "stream_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-messages"
+  }
+}
+
+resource "aws_dynamodb_table" "users" {
+  name         = "${var.project_name}-${var.environment}-users"
+  billing_mode = var.billing_mode
+  hash_key     = "user_id"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name     = "EmailIndex"
+    hash_key = "email"
+    projection_type = "ALL"
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-users"
+  }
+}
+
+resource "aws_dynamodb_table" "streams" {
+  name         = "${var.project_name}-${var.environment}-streams"
+  billing_mode = var.billing_mode
+  hash_key     = "stream_id"
+
+  attribute {
+    name = "stream_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "status"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name     = "UserIndex"
+    hash_key = "user_id"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name     = "StatusIndex"
+    hash_key = "status"
+    projection_type = "ALL"
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-streams"
   }
 }

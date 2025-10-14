@@ -89,7 +89,7 @@ module "alb" {
   
   # Logging
   enable_access_logs    = true
-  access_logs_bucket   = "my-alb-logs-bucket"
+  access_logs_bucket   = "${var.project_name}-alb-logs-${var.environment}-${data.aws_caller_identity.current.account_id}"
   
   # Monitoring
   enable_cloudwatch_alarms = true

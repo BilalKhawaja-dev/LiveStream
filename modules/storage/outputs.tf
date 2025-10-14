@@ -84,9 +84,9 @@ output "athena_results_bucket_domain_name" {
 output "bucket_names" {
   description = "Map of all bucket names for easy reference"
   value = {
-    streaming_logs  = aws_s3_bucket.streaming_logs.id
-    error_logs      = aws_s3_bucket.error_logs.id
-    backups         = aws_s3_bucket.backups.id
-    athena_results  = aws_s3_bucket.athena_results.id
+    streaming_logs = aws_s3_bucket.streaming_logs.id
+    error_logs     = aws_s3_bucket.error_logs.id
+    backups        = aws_s3_bucket.backups.id
+    athena_results = aws_s3_bucket.athena_results.id
   }
 }

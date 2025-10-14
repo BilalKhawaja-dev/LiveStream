@@ -99,7 +99,7 @@ resource "aws_glue_crawler" "streaming_logs_crawler" {
 
   s3_target {
     path = "s3://${var.s3_logs_bucket_name}/"
-    
+
     # Exclude error and processed directories from crawling
     exclusions = [
       "errors/**",
@@ -153,26 +153,26 @@ resource "aws_glue_catalog_table" "application_logs" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    "classification"                     = "json"
-    "compressionType"                   = "gzip"
-    "typeOfData"                        = "file"
-    "projection.enabled"                = "true"
-    "projection.year.type"              = "integer"
-    "projection.year.range"             = "2024,2030"
-    "projection.year.interval"          = "1"
-    "projection.month.type"             = "integer"
-    "projection.month.range"            = "1,12"
-    "projection.month.interval"         = "1"
-    "projection.month.digits"           = "2"
-    "projection.day.type"               = "integer"
-    "projection.day.range"              = "1,31"
-    "projection.day.interval"           = "1"
-    "projection.day.digits"             = "2"
-    "projection.hour.type"              = "integer"
-    "projection.hour.range"             = "0,23"
-    "projection.hour.interval"          = "1"
-    "projection.hour.digits"            = "2"
-    "storage.location.template"         = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/application-logs/"
+    "classification"            = "json"
+    "compressionType"           = "gzip"
+    "typeOfData"                = "file"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2024,2030"
+    "projection.year.interval"  = "1"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.interval" = "1"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.interval"   = "1"
+    "projection.day.digits"     = "2"
+    "projection.hour.type"      = "integer"
+    "projection.hour.range"     = "0,23"
+    "projection.hour.interval"  = "1"
+    "projection.hour.digits"    = "2"
+    "storage.location.template" = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/application-logs/"
   }
 
   storage_descriptor {
@@ -183,7 +183,7 @@ resource "aws_glue_catalog_table" "application_logs" {
     ser_de_info {
       name                  = "json-serde"
       serialization_library = "org.openx.data.jsonserde.JsonSerDe"
-      
+
       parameters = {
         "serialization.format" = "1"
       }
@@ -257,26 +257,26 @@ resource "aws_glue_catalog_table" "security_events" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    "classification"                     = "json"
-    "compressionType"                   = "gzip"
-    "typeOfData"                        = "file"
-    "projection.enabled"                = "true"
-    "projection.year.type"              = "integer"
-    "projection.year.range"             = "2024,2030"
-    "projection.year.interval"          = "1"
-    "projection.month.type"             = "integer"
-    "projection.month.range"            = "1,12"
-    "projection.month.interval"         = "1"
-    "projection.month.digits"           = "2"
-    "projection.day.type"               = "integer"
-    "projection.day.range"              = "1,31"
-    "projection.day.interval"           = "1"
-    "projection.day.digits"             = "2"
-    "projection.hour.type"              = "integer"
-    "projection.hour.range"             = "0,23"
-    "projection.hour.interval"          = "1"
-    "projection.hour.digits"            = "2"
-    "storage.location.template"         = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/security-events/"
+    "classification"            = "json"
+    "compressionType"           = "gzip"
+    "typeOfData"                = "file"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2024,2030"
+    "projection.year.interval"  = "1"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.interval" = "1"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.interval"   = "1"
+    "projection.day.digits"     = "2"
+    "projection.hour.type"      = "integer"
+    "projection.hour.range"     = "0,23"
+    "projection.hour.interval"  = "1"
+    "projection.hour.digits"    = "2"
+    "storage.location.template" = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/security-events/"
   }
 
   storage_descriptor {
@@ -287,7 +287,7 @@ resource "aws_glue_catalog_table" "security_events" {
     ser_de_info {
       name                  = "json-serde"
       serialization_library = "org.openx.data.jsonserde.JsonSerDe"
-      
+
       parameters = {
         "serialization.format" = "1"
       }
@@ -361,26 +361,26 @@ resource "aws_glue_catalog_table" "performance_metrics" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    "classification"                     = "json"
-    "compressionType"                   = "gzip"
-    "typeOfData"                        = "file"
-    "projection.enabled"                = "true"
-    "projection.year.type"              = "integer"
-    "projection.year.range"             = "2024,2030"
-    "projection.year.interval"          = "1"
-    "projection.month.type"             = "integer"
-    "projection.month.range"            = "1,12"
-    "projection.month.interval"         = "1"
-    "projection.month.digits"           = "2"
-    "projection.day.type"               = "integer"
-    "projection.day.range"              = "1,31"
-    "projection.day.interval"           = "1"
-    "projection.day.digits"             = "2"
-    "projection.hour.type"              = "integer"
-    "projection.hour.range"             = "0,23"
-    "projection.hour.interval"          = "1"
-    "projection.hour.digits"            = "2"
-    "storage.location.template"         = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/performance-metrics/"
+    "classification"            = "json"
+    "compressionType"           = "gzip"
+    "typeOfData"                = "file"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2024,2030"
+    "projection.year.interval"  = "1"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.interval" = "1"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.interval"   = "1"
+    "projection.day.digits"     = "2"
+    "projection.hour.type"      = "integer"
+    "projection.hour.range"     = "0,23"
+    "projection.hour.interval"  = "1"
+    "projection.hour.digits"    = "2"
+    "storage.location.template" = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/performance-metrics/"
   }
 
   storage_descriptor {
@@ -391,7 +391,7 @@ resource "aws_glue_catalog_table" "performance_metrics" {
     ser_de_info {
       name                  = "json-serde"
       serialization_library = "org.openx.data.jsonserde.JsonSerDe"
-      
+
       parameters = {
         "serialization.format" = "1"
       }
@@ -460,26 +460,26 @@ resource "aws_glue_catalog_table" "user_activity" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    "classification"                     = "json"
-    "compressionType"                   = "gzip"
-    "typeOfData"                        = "file"
-    "projection.enabled"                = "true"
-    "projection.year.type"              = "integer"
-    "projection.year.range"             = "2024,2030"
-    "projection.year.interval"          = "1"
-    "projection.month.type"             = "integer"
-    "projection.month.range"            = "1,12"
-    "projection.month.interval"         = "1"
-    "projection.month.digits"           = "2"
-    "projection.day.type"               = "integer"
-    "projection.day.range"              = "1,31"
-    "projection.day.interval"           = "1"
-    "projection.day.digits"             = "2"
-    "projection.hour.type"              = "integer"
-    "projection.hour.range"             = "0,23"
-    "projection.hour.interval"          = "1"
-    "projection.hour.digits"            = "2"
-    "storage.location.template"         = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/user-activity/"
+    "classification"            = "json"
+    "compressionType"           = "gzip"
+    "typeOfData"                = "file"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2024,2030"
+    "projection.year.interval"  = "1"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.interval" = "1"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.interval"   = "1"
+    "projection.day.digits"     = "2"
+    "projection.hour.type"      = "integer"
+    "projection.hour.range"     = "0,23"
+    "projection.hour.interval"  = "1"
+    "projection.hour.digits"    = "2"
+    "storage.location.template" = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/user-activity/"
   }
 
   storage_descriptor {
@@ -490,7 +490,7 @@ resource "aws_glue_catalog_table" "user_activity" {
     ser_de_info {
       name                  = "json-serde"
       serialization_library = "org.openx.data.jsonserde.JsonSerDe"
-      
+
       parameters = {
         "serialization.format" = "1"
       }
@@ -569,26 +569,26 @@ resource "aws_glue_catalog_table" "system_changes" {
   table_type = "EXTERNAL_TABLE"
 
   parameters = {
-    "classification"                     = "json"
-    "compressionType"                   = "gzip"
-    "typeOfData"                        = "file"
-    "projection.enabled"                = "true"
-    "projection.year.type"              = "integer"
-    "projection.year.range"             = "2024,2030"
-    "projection.year.interval"          = "1"
-    "projection.month.type"             = "integer"
-    "projection.month.range"            = "1,12"
-    "projection.month.interval"         = "1"
-    "projection.month.digits"           = "2"
-    "projection.day.type"               = "integer"
-    "projection.day.range"              = "1,31"
-    "projection.day.interval"           = "1"
-    "projection.day.digits"             = "2"
-    "projection.hour.type"              = "integer"
-    "projection.hour.range"             = "0,23"
-    "projection.hour.interval"          = "1"
-    "projection.hour.digits"            = "2"
-    "storage.location.template"         = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/system-changes/"
+    "classification"            = "json"
+    "compressionType"           = "gzip"
+    "typeOfData"                = "file"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2024,2030"
+    "projection.year.interval"  = "1"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.interval" = "1"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.interval"   = "1"
+    "projection.day.digits"     = "2"
+    "projection.hour.type"      = "integer"
+    "projection.hour.range"     = "0,23"
+    "projection.hour.interval"  = "1"
+    "projection.hour.digits"    = "2"
+    "storage.location.template" = "s3://${var.s3_logs_bucket_name}/year=$${year}/month=$${month}/day=$${day}/hour=$${hour}/system-changes/"
   }
 
   storage_descriptor {
@@ -599,7 +599,7 @@ resource "aws_glue_catalog_table" "system_changes" {
     ser_de_info {
       name                  = "json-serde"
       serialization_library = "org.openx.data.jsonserde.JsonSerDe"
-      
+
       parameters = {
         "serialization.format" = "1"
       }

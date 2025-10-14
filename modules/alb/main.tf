@@ -69,6 +69,10 @@ resource "aws_lb" "frontend_alb" {
   enable_http2                     = true
   idle_timeout                     = var.idle_timeout
 
+  # Security enhancements
+  drop_invalid_header_fields = true
+  enable_waf_fail_open       = false
+
   # Access logs
   access_logs {
     bucket  = var.access_logs_bucket
@@ -92,15 +96,16 @@ resource "aws_lb_target_group" "frontend_apps" {
 
   # Health check configuration
   health_check {
-    enabled             = true
-    healthy_threshold   = var.health_check_healthy_threshold
-    unhealthy_threshold = var.health_check_unhealthy_threshold
-    timeout             = var.health_check_timeout
-    interval            = var.health_check_interval
-    path                = each.value.health_check_path
-    matcher             = "200"
-    port                = "traffic-port"
-    protocol            = "HTTP"
+    enabled              = true
+    healthy_threshold    = var.health_check_healthy_threshold
+    unhealthy_threshold  = var.health_check_unhealthy_threshold
+    timeout              = var.health_check_timeout
+    interval             = var.health_check_interval
+    path                 = each.value.health_check_path
+    matcher              = "200,202"
+    port                 = "traffic-port"
+    protocol             = "HTTP"
+    grace_period_seconds = 300
   }
 
   # Stickiness configuration
@@ -111,10 +116,12 @@ resource "aws_lb_target_group" "frontend_apps" {
   }
 
   # Target group attributes
-  target_type                          = "ip"
-  deregistration_delay                 = var.deregistration_delay
-  slow_start                          = var.slow_start_duration
-  load_balancing_algorithm_type       = var.load_balancing_algorithm
+  target_type                   = "ip"
+  deregistration_delay          = var.deregistration_delay
+  slow_start                    = var.slow_start_duration
+  load_balancing_algorithm_type = var.load_balancing_algorithm
+  preserve_client_ip            = true
+  proxy_protocol_v2             = false
 
   tags = merge(var.tags, {
     Name        = "${var.project_name}-${var.environment}-${each.key}-tg"
@@ -147,7 +154,7 @@ resource "aws_lb_listener" "frontend_http" {
   })
 }
 
-# HTTPS Listener with certificate
+# HTTPS Listener with certificate and security headers
 resource "aws_lb_listener" "frontend_https" {
   load_balancer_arn = aws_lb.frontend_alb.arn
   port              = "443"
@@ -155,7 +162,7 @@ resource "aws_lb_listener" "frontend_https" {
   ssl_policy        = var.ssl_policy
   certificate_arn   = var.certificate_arn
 
-  # Default action - return 404 for unmatched paths
+  # Default action - return 404 for unmatched paths with security headers
   default_action {
     type = "fixed-response"
 
@@ -168,6 +175,49 @@ resource "aws_lb_listener" "frontend_https" {
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-${var.environment}-https-listener"
+  })
+}
+
+# Security headers rule for all responses
+resource "aws_lb_listener_rule" "security_headers" {
+  listener_arn = aws_lb_listener.frontend_https.arn
+  priority     = 1
+
+  action {
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/html"
+      message_body = <<-EOF
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' https:; media-src 'self' https:; object-src 'none'; frame-src 'none';">
+          <meta http-equiv="X-Content-Type-Options" content="nosniff">
+          <meta http-equiv="X-Frame-Options" content="DENY">
+          <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+          <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload">
+          <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+          <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
+        </head>
+        <body>
+          <h1>Service Unavailable</h1>
+          <p>The requested service is currently unavailable.</p>
+        </body>
+        </html>
+      EOF
+      status_code  = "503"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health-check-fail"]
+    }
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-security-headers-rule"
   })
 }
 

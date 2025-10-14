@@ -48,11 +48,11 @@ output "workgroup_configuration" {
   description = "Summary of Athena workgroup configuration"
   value = {
     name                            = aws_athena_workgroup.streaming_logs.name
-    state                          = aws_athena_workgroup.streaming_logs.state
-    result_location                = "s3://${var.athena_results_bucket_name}/workgroup-results/"
-    bytes_scanned_cutoff_per_query = aws_athena_workgroup.streaming_logs.configuration[0].bytes_scanned_cutoff_per_query
+    state                           = aws_athena_workgroup.streaming_logs.state
+    result_location                 = "s3://${var.athena_results_bucket_name}/workgroup-results/"
+    bytes_scanned_cutoff_per_query  = aws_athena_workgroup.streaming_logs.configuration[0].bytes_scanned_cutoff_per_query
     enforce_workgroup_configuration = aws_athena_workgroup.streaming_logs.configuration[0].enforce_workgroup_configuration
-    encryption_option              = aws_athena_workgroup.streaming_logs.configuration[0].result_configuration[0].encryption_configuration[0].encryption_option
+    encryption_option               = aws_athena_workgroup.streaming_logs.configuration[0].result_configuration[0].encryption_configuration[0].encryption_option
   }
 }
 

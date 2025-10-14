@@ -140,9 +140,13 @@ init_environment() {
         cp "terraform.tfvars.example" "terraform.tfvars"
     fi
     
-    # Initialize Terraform
+    # Initialize Terraform with error handling
     log_info "Running terraform init..."
-    terraform init
+    if ! terraform init; then
+        log_error "Terraform initialization failed for environment: $env"
+        log_error "Please check your backend configuration and AWS credentials"
+        exit 1
+    fi
     
     # Create or select workspace
     if terraform workspace list | grep -q "$env"; then
@@ -173,9 +177,26 @@ plan_environment() {
         cp "environments/$env/terraform.tfvars" "terraform.tfvars"
     fi
     
-    # Run plan
+    # Run plan with error handling
     log_info "Running terraform plan..."
-    terraform plan -var-file="terraform.tfvars" -out="$env.tfplan"
+    local plan_output
+    local plan_exit_code
+    
+    if plan_output=$(terraform plan -var-file="terraform.tfvars" -out="$env.tfplan" 2>&1); then
+        plan_exit_code=$?
+        if [ $plan_exit_code -eq 0 ]; then
+            log_success "Plan completed successfully"
+        else
+            log_error "Plan completed with warnings or errors (exit code: $plan_exit_code)"
+            echo "$plan_output" | grep -E "(Error|Warning):" || true
+            exit 1
+        fi
+    else
+        plan_exit_code=$?
+        log_error "Terraform plan failed for environment: $env (exit code: $plan_exit_code)"
+        echo "$plan_output"
+        exit 1
+    fi
     
     log_success "Plan completed for environment: $env"
     log_info "Plan saved to: $env.tfplan"
@@ -207,8 +228,23 @@ apply_environment() {
             fi
         fi
         
-        terraform apply "$env.tfplan"
-        rm -f "$env.tfplan"
+        local apply_exit_code
+        if terraform apply "$env.tfplan"; then
+            apply_exit_code=$?
+            if [ $apply_exit_code -eq 0 ]; then
+                log_success "Apply completed successfully"
+                rm -f "$env.tfplan"
+            else
+                log_error "Terraform apply failed for environment: $env (exit code: $apply_exit_code)"
+                log_error "Plan file preserved for investigation: $env.tfplan"
+                exit 1
+            fi
+        else
+            apply_exit_code=$?
+            log_error "Terraform apply failed for environment: $env (exit code: $apply_exit_code)"
+            log_error "Plan file preserved for investigation: $env.tfplan"
+            exit 1
+        fi
     else
         log_warning "No plan file found. Running plan and apply..."
         
@@ -227,7 +263,12 @@ apply_environment() {
             fi
         fi
         
-        terraform apply -var-file="terraform.tfvars"
+        if terraform apply -var-file="terraform.tfvars"; then
+            log_success "Apply completed successfully"
+        else
+            log_error "Terraform apply failed for environment: $env"
+            exit 1
+        fi
     fi
     
     log_success "Changes applied successfully to environment: $env"

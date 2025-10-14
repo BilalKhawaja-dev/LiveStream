@@ -146,9 +146,66 @@ export const getStreamQualityUrl = (streamData: any, userTier: SubscriptionTier)
 };
 
 export const formatViewerCount = (count: number): string => {
-  if (count < 1000) return count.toString();
-  if (count < 1000000) return `${(count / 1000).toFixed(1)}K`;
-  return `${(count / 1000000).toFixed(1)}M`;
+  try {
+    if (typeof count !== 'number' || isNaN(count)) {
+      // Use secure logging to prevent log injection
+      import('./secureLogger').then(({ secureLogger }) => {
+        secureLogger.warn('Invalid count provided to formatViewerCount', { 
+          component: 'formatViewerCount',
+          providedValue: typeof count 
+        });
+      });
+      return '0';
+    }
+    
+    if (count < 1000) return count.toString();
+    if (count < 1000000) return `${(count / 1000).toFixed(1)}K`;
+    return `${(count / 1000000).toFixed(1)}M`;
+  } catch (error) {
+    // Use secure logging to prevent log injection
+    import('./secureLogger').then(({ secureLogger }) => {
+      secureLogger.error('formatViewerCount error', error, { component: 'formatViewerCount' });
+    });
+    return '0';
+  }
+};
+
+export const formatCurrency = (amount: number, currency = 'GBP'): string => {
+  try {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      // Use secure logging to prevent log injection
+      import('./secureLogger').then(({ secureLogger }) => {
+        secureLogger.warn('Invalid amount provided to formatCurrency', { 
+          component: 'formatCurrency',
+          providedValue: typeof amount 
+        });
+      });
+      return '£0.00';
+    }
+
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  } catch (error) {
+    // Use secure logging to prevent log injection
+    import('./secureLogger').then(({ secureLogger }) => {
+      secureLogger.error('formatCurrency error', error, { component: 'formatCurrency' });
+    });
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+};
+
+export const safeParseJSON = <T = any>(jsonString: string, fallback: T): T => {
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    // Use secure logging instead of direct console
+    import('./secureLogger').then(({ secureLogger }) => {
+      secureLogger.warn('Failed to parse JSON', { action: 'safeParseJSON' });
+    });
+    return fallback;
+  }
 };
 
 // Storage utilities
@@ -165,7 +222,13 @@ export const setStorageItem = <T>(key: string, value: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    console.warn('Failed to save to localStorage:', error);
+    // Use secure logging to prevent log injection
+    import('./secureLogger').then(({ secureLogger }) => {
+      secureLogger.warn('Failed to save to localStorage', { 
+        component: 'setStorageItem',
+        key: key?.substring(0, 50) // Limit key length for security
+      });
+    });
   }
 };
 

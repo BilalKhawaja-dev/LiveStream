@@ -123,7 +123,13 @@ export const ContentSearch: React.FC<ContentSearchProps> = ({
             setResults(filteredResults);
 
         } catch (error) {
-            console.error('Search error:', error);
+            // Use secure logging to prevent log injection
+            import('@streaming/shared').then(({ secureLogger }) => {
+                secureLogger.error('Search operation failed', error, {
+                    component: 'ContentSearch',
+                    action: 'performSearch'
+                });
+            });
             addNotification({
                 type: 'error',
                 title: 'Search Failed',

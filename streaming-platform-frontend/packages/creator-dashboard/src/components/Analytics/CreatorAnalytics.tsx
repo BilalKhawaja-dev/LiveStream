@@ -232,7 +232,13 @@ export const CreatorAnalytics: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       // Data would be fetched based on timeRange
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      // Use secure logging to prevent log injection
+      import('@streaming/shared').then(({ secureLogger }) => {
+        secureLogger.error('Error loading analytics', error, { 
+          component: 'CreatorAnalytics',
+          action: 'loadAnalyticsData' 
+        });
+      });
     } finally {
       setLoading(false);
     }

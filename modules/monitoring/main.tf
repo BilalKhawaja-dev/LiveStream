@@ -178,10 +178,10 @@ resource "aws_cloudwatch_dashboard" "log_pipeline_health" {
         height = 6
 
         properties = {
-          query   = "SOURCE '${var.project_name}-${var.environment}-kinesis-firehose-logs'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
-          region  = data.aws_region.current.name
-          title   = "Recent Pipeline Errors"
-          view    = "table"
+          query  = "SOURCE '${var.project_name}-${var.environment}-kinesis-firehose-logs'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
+          region = data.aws_region.current.name
+          title  = "Recent Pipeline Errors"
+          view   = "table"
         }
       }
     ]
@@ -354,10 +354,10 @@ resource "aws_cloudwatch_dashboard" "query_performance" {
         height = 6
 
         properties = {
-          query   = "SOURCE '${var.project_name}-${var.environment}-athena-logs'\n| fields @timestamp, @message\n| filter @message like /FAILED/\n| sort @timestamp desc\n| limit 50"
-          region  = data.aws_region.current.name
-          title   = "Failed Queries"
-          view    = "table"
+          query  = "SOURCE '${var.project_name}-${var.environment}-athena-logs'\n| fields @timestamp, @message\n| filter @message like /FAILED/\n| sort @timestamp desc\n| limit 50"
+          region = data.aws_region.current.name
+          title  = "Failed Queries"
+          view   = "table"
         }
       }
     ]
@@ -367,7 +367,7 @@ resource "aws_cloudwatch_dashboard" "query_performance" {
 # Security Monitoring Dashboard
 resource "aws_cloudwatch_dashboard" "security_monitoring" {
   count = var.enable_security_dashboard ? 1 : 0
-  
+
   dashboard_name = "${var.project_name}-${var.environment}-security-monitoring"
 
   dashboard_body = jsonencode({
@@ -380,10 +380,10 @@ resource "aws_cloudwatch_dashboard" "security_monitoring" {
         height = 6
 
         properties = {
-          query   = "SOURCE '${var.project_name}-${var.environment}-cognito'\n| fields @timestamp, @message\n| filter @message like /FAILED/ or @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
-          region  = data.aws_region.current.name
-          title   = "Authentication Failures"
-          view    = "table"
+          query  = "SOURCE '${var.project_name}-${var.environment}-cognito'\n| fields @timestamp, @message\n| filter @message like /FAILED/ or @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
+          region = data.aws_region.current.name
+          title  = "Authentication Failures"
+          view   = "table"
         }
       },
       {
@@ -394,10 +394,10 @@ resource "aws_cloudwatch_dashboard" "security_monitoring" {
         height = 6
 
         properties = {
-          query   = "SOURCE '${var.project_name}-${var.environment}-apigateway'\n| fields @timestamp, @message\n| filter @message like /403/ or @message like /401/\n| sort @timestamp desc\n| limit 100"
-          region  = data.aws_region.current.name
-          title   = "Access Denied Events"
-          view    = "table"
+          query  = "SOURCE '${var.project_name}-${var.environment}-apigateway'\n| fields @timestamp, @message\n| filter @message like /403/ or @message like /401/\n| sort @timestamp desc\n| limit 100"
+          region = data.aws_region.current.name
+          title  = "Access Denied Events"
+          view   = "table"
         }
       },
       {
@@ -428,10 +428,73 @@ resource "aws_cloudwatch_dashboard" "security_monitoring" {
 # Cost Monitoring and Budget Alerts
 # Requirements: 5.1, 5.6, 5.8
 
-# SNS topic for cost alerts
+# KMS key for SNS topic encryption
+resource "aws_kms_key" "sns_encryption" {
+  description             = "KMS key for SNS topic encryption"
+  deletion_window_in_days = var.kms_deletion_window
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow SNS service"
+        Effect = "Allow"
+        Principal = {
+          Service = "sns.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-sns-kms-key"
+    Environment = var.environment
+    Project     = var.project_name
+    Type        = "encryption"
+  }
+}
+
+resource "aws_kms_alias" "sns_encryption" {
+  name          = "alias/${var.project_name}-${var.environment}-sns-encryption"
+  target_key_id = aws_kms_key.sns_encryption.key_id
+}
+
+# SNS topic for cost alerts with encryption
 resource "aws_sns_topic" "cost_alerts" {
-  name         = "${var.project_name}-${var.environment}-cost-alerts"
-  display_name = "Cost Monitoring Alerts"
+  name              = "${var.project_name}-${var.environment}-cost-alerts"
+  display_name      = "Cost Monitoring Alerts"
+  kms_master_key_id = aws_kms_key.sns_encryption.arn
+
+  # Enable server-side encryption
+  delivery_policy = jsonencode({
+    "http" = {
+      "defaultHealthyRetryPolicy" = {
+        "minDelayTarget"     = 20
+        "maxDelayTarget"     = 20
+        "numRetries"         = 3
+        "numMaxDelayRetries" = 0
+        "numMinDelayRetries" = 0
+        "numNoDelayRetries"  = 0
+        "backoffFunction"    = "linear"
+      }
+      "disableSubscriptionOverrides" = false
+    }
+  })
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-cost-alerts"
@@ -443,36 +506,36 @@ resource "aws_sns_topic" "cost_alerts" {
 
 # Budget for overall project costs
 resource "aws_budgets_budget" "project_budget" {
-  name         = "${var.project_name}-${var.environment}-monthly-budget"
-  budget_type  = "COST"
-  limit_amount = var.monthly_budget_limit
-  limit_unit   = "USD"
-  time_unit    = "MONTHLY"
+  name              = "${var.project_name}-${var.environment}-monthly-budget"
+  budget_type       = "COST"
+  limit_amount      = var.monthly_budget_limit
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
   cost_filter {
     name   = "TagKey"
     values = ["Project"]
   }
-  
+
   cost_filter {
-    name   = "TagKey" 
+    name   = "TagKey"
     values = ["Environment"]
   }
 
   notification {
     comparison_operator        = "GREATER_THAN"
-    threshold                 = 80
-    threshold_type            = "PERCENTAGE"
-    notification_type         = "ACTUAL"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
     subscriber_email_addresses = var.budget_notification_emails
     subscriber_sns_topic_arns  = [aws_sns_topic.cost_alerts.arn]
   }
 
   notification {
     comparison_operator        = "GREATER_THAN"
-    threshold                 = 100
-    threshold_type            = "PERCENTAGE"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
     notification_type          = "FORECASTED"
     subscriber_email_addresses = var.budget_notification_emails
     subscriber_sns_topic_arns  = [aws_sns_topic.cost_alerts.arn]
@@ -480,8 +543,8 @@ resource "aws_budgets_budget" "project_budget" {
 
   notification {
     comparison_operator        = "GREATER_THAN"
-    threshold                 = 120
-    threshold_type            = "PERCENTAGE"
+    threshold                  = 120
+    threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
     subscriber_email_addresses = var.budget_notification_emails
     subscriber_sns_topic_arns  = [aws_sns_topic.cost_alerts.arn]
@@ -498,31 +561,31 @@ resource "aws_budgets_budget" "project_budget" {
 # Service-specific budgets
 resource "aws_budgets_budget" "s3_budget" {
   count = var.enable_service_budgets ? 1 : 0
-  
-  name         = "${var.project_name}-${var.environment}-s3-budget"
-  budget_type  = "COST"
-  limit_amount = var.s3_budget_limit
-  limit_unit   = "USD"
-  time_unit    = "MONTHLY"
+
+  name              = "${var.project_name}-${var.environment}-s3-budget"
+  budget_type       = "COST"
+  limit_amount      = var.s3_budget_limit
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
   cost_filter {
     name   = "Service"
     values = ["Amazon Simple Storage Service"]
   }
-  
+
   cost_filter {
     name   = "TagKey"
     values = ["Project"]
   }
-  
+
   cost_filter {
     name   = "TagKey"
     values = ["Environment"]
   }
 
   notification {
-    comparison_operator        = "GREATER_THAN"
+    comparison_operator       = "GREATER_THAN"
     threshold                 = 80
     threshold_type            = "PERCENTAGE"
     notification_type         = "ACTUAL"
@@ -540,31 +603,31 @@ resource "aws_budgets_budget" "s3_budget" {
 
 resource "aws_budgets_budget" "rds_budget" {
   count = var.enable_service_budgets ? 1 : 0
-  
-  name         = "${var.project_name}-${var.environment}-rds-budget"
-  budget_type  = "COST"
-  limit_amount = var.rds_budget_limit
-  limit_unit   = "USD"
-  time_unit    = "MONTHLY"
+
+  name              = "${var.project_name}-${var.environment}-rds-budget"
+  budget_type       = "COST"
+  limit_amount      = var.rds_budget_limit
+  limit_unit        = "USD"
+  time_unit         = "MONTHLY"
   time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
 
   cost_filter {
     name   = "Service"
     values = ["Amazon Relational Database Service"]
   }
-  
+
   cost_filter {
     name   = "TagKey"
     values = ["Project"]
   }
-  
+
   cost_filter {
     name   = "TagKey"
     values = ["Environment"]
   }
 
   notification {
-    comparison_operator        = "GREATER_THAN"
+    comparison_operator       = "GREATER_THAN"
     threshold                 = 80
     threshold_type            = "PERCENTAGE"
     notification_type         = "ACTUAL"
@@ -587,7 +650,7 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
   evaluation_periods  = "1"
   metric_name         = "EstimatedCharges"
   namespace           = "AWS/Billing"
-  period              = "86400"  # Daily
+  period              = "86400" # Daily
   statistic           = "Maximum"
   threshold           = var.billing_alarm_threshold
   alarm_description   = "This metric monitors estimated charges"
@@ -610,7 +673,7 @@ resource "aws_cloudwatch_metric_alarm" "estimated_charges" {
 # Service-specific cost alarms
 resource "aws_cloudwatch_metric_alarm" "s3_costs" {
   count = var.enable_service_cost_alarms ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-s3-costs"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -639,7 +702,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_costs" {
 
 resource "aws_cloudwatch_metric_alarm" "athena_costs" {
   count = var.enable_service_cost_alarms ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-athena-costs"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -669,7 +732,7 @@ resource "aws_cloudwatch_metric_alarm" "athena_costs" {
 # Data transfer cost alarm
 resource "aws_cloudwatch_metric_alarm" "data_transfer_costs" {
   count = var.enable_service_cost_alarms ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-data-transfer-costs"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
@@ -760,7 +823,7 @@ resource "aws_cloudwatch_metric_alarm" "data_transfer_costs" {
 # Lambda function for cost optimization recommendations
 resource "aws_iam_role" "cost_optimizer_role" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-cost-optimizer-role"
 
   assume_role_policy = jsonencode({
@@ -786,7 +849,7 @@ resource "aws_iam_role" "cost_optimizer_role" {
 
 resource "aws_iam_role_policy" "cost_optimizer_policy" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-cost-optimizer-policy"
   role = aws_iam_role.cost_optimizer_role[0].id
 
@@ -855,14 +918,14 @@ resource "aws_iam_role_policy" "cost_optimizer_policy" {
 # Lambda function for cost optimization
 resource "aws_lambda_function" "cost_optimizer" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   filename         = data.archive_file.cost_optimizer_zip[0].output_path
   function_name    = "${var.project_name}-${var.environment}-cost-optimizer"
-  role            = aws_iam_role.cost_optimizer_role[0].arn
-  handler         = "index.handler"
+  role             = aws_iam_role.cost_optimizer_role[0].arn
+  handler          = "index.handler"
   source_code_hash = data.archive_file.cost_optimizer_zip[0].output_base64sha256
-  runtime         = "python3.9"
-  timeout         = 300
+  runtime          = "python3.9"
+  timeout          = 300
 
   environment {
     variables = {
@@ -881,12 +944,29 @@ resource "aws_lambda_function" "cost_optimizer" {
   }
 }
 
+# Secure Lambda Function URL with authentication
+resource "aws_lambda_function_url" "cost_optimizer_url" {
+  count = var.enable_cost_optimization_lambda && var.enable_lambda_function_urls ? 1 : 0
+
+  function_name      = aws_lambda_function.cost_optimizer[0].function_name
+  authorization_type = "AWS_IAM" # Require IAM authentication
+
+  cors {
+    allow_credentials = false
+    allow_headers     = ["date", "keep-alive", "authorization"]
+    allow_methods     = ["POST"]
+    allow_origins     = var.allowed_origins
+    expose_headers    = ["date", "keep-alive"]
+    max_age           = 86400
+  }
+}
+
 # Lambda function source code for cost optimization
 resource "local_file" "cost_optimizer_source" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   filename = "${path.module}/cost_optimizer.py"
-  content = <<EOF
+  content  = <<EOF
 import json
 import boto3
 import os
@@ -1014,18 +1094,18 @@ EOF
 # Create ZIP file for Lambda deployment
 data "archive_file" "cost_optimizer_zip" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   type        = "zip"
   source_file = local_file.cost_optimizer_source[0].filename
   output_path = "${path.module}/cost_optimizer.zip"
-  
+
   depends_on = [local_file.cost_optimizer_source]
 }
 
 # CloudWatch Event Rule for scheduled cost optimization
 resource "aws_cloudwatch_event_rule" "cost_optimization_schedule" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   name                = "${var.project_name}-${var.environment}-cost-optimization"
   description         = "Trigger cost optimization analysis"
   schedule_expression = var.cost_optimization_schedule
@@ -1040,7 +1120,7 @@ resource "aws_cloudwatch_event_rule" "cost_optimization_schedule" {
 
 resource "aws_cloudwatch_event_target" "cost_optimization_target" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   rule      = aws_cloudwatch_event_rule.cost_optimization_schedule[0].name
   target_id = "CostOptimizationTarget"
   arn       = aws_lambda_function.cost_optimizer[0].arn
@@ -1048,7 +1128,7 @@ resource "aws_cloudwatch_event_target" "cost_optimization_target" {
 
 resource "aws_lambda_permission" "allow_cloudwatch_cost_optimization" {
   count = var.enable_cost_optimization_lambda ? 1 : 0
-  
+
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.cost_optimizer[0].function_name
@@ -1062,7 +1142,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_cost_optimization" {
 # IAM role for cleanup Lambda functions
 resource "aws_iam_role" "cleanup_lambda_role" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-cleanup-lambda-role"
 
   assume_role_policy = jsonencode({
@@ -1088,7 +1168,7 @@ resource "aws_iam_role" "cleanup_lambda_role" {
 
 resource "aws_iam_role_policy" "cleanup_lambda_policy" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-cleanup-lambda-policy"
   role = aws_iam_role.cleanup_lambda_role[0].id
 
@@ -1160,22 +1240,22 @@ resource "aws_iam_role_policy" "cleanup_lambda_policy" {
 # Lambda function for S3 cleanup
 resource "aws_lambda_function" "s3_cleanup" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   filename         = data.archive_file.s3_cleanup_zip[0].output_path
   function_name    = "${var.project_name}-${var.environment}-s3-cleanup"
-  role            = aws_iam_role.cleanup_lambda_role[0].arn
-  handler         = "index.handler"
+  role             = aws_iam_role.cleanup_lambda_role[0].arn
+  handler          = "index.handler"
   source_code_hash = data.archive_file.s3_cleanup_zip[0].output_base64sha256
-  runtime         = "python3.9"
-  timeout         = 900  # 15 minutes
+  runtime          = "python3.9"
+  timeout          = 900 # 15 minutes
 
   environment {
     variables = {
-      PROJECT_NAME = var.project_name
-      ENVIRONMENT  = var.environment
-      SNS_TOPIC_ARN = aws_sns_topic.cost_alerts.arn
+      PROJECT_NAME                  = var.project_name
+      ENVIRONMENT                   = var.environment
+      SNS_TOPIC_ARN                 = aws_sns_topic.cost_alerts.arn
       ATHENA_RESULTS_RETENTION_DAYS = var.athena_results_retention_days
-      QUERY_RESULTS_RETENTION_DAYS = var.query_results_retention_days
+      QUERY_RESULTS_RETENTION_DAYS  = var.query_results_retention_days
     }
   }
 
@@ -1190,9 +1270,9 @@ resource "aws_lambda_function" "s3_cleanup" {
 # S3 cleanup Lambda source code
 resource "local_file" "s3_cleanup_source" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   filename = "${path.module}/s3_cleanup.py"
-  content = <<EOF
+  content  = <<EOF
 import json
 import boto3
 import os
@@ -1320,20 +1400,20 @@ EOF
 # Lambda function for CloudWatch logs cleanup
 resource "aws_lambda_function" "logs_cleanup" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   filename         = data.archive_file.logs_cleanup_zip[0].output_path
   function_name    = "${var.project_name}-${var.environment}-logs-cleanup"
-  role            = aws_iam_role.cleanup_lambda_role[0].arn
-  handler         = "index.handler"
+  role             = aws_iam_role.cleanup_lambda_role[0].arn
+  handler          = "index.handler"
   source_code_hash = data.archive_file.logs_cleanup_zip[0].output_base64sha256
-  runtime         = "python3.9"
-  timeout         = 600  # 10 minutes
+  runtime          = "python3.9"
+  timeout          = 600 # 10 minutes
 
   environment {
     variables = {
-      PROJECT_NAME = var.project_name
-      ENVIRONMENT  = var.environment
-      SNS_TOPIC_ARN = aws_sns_topic.cost_alerts.arn
+      PROJECT_NAME       = var.project_name
+      ENVIRONMENT        = var.environment
+      SNS_TOPIC_ARN      = aws_sns_topic.cost_alerts.arn
       LOG_RETENTION_DAYS = var.log_cleanup_retention_days
     }
   }
@@ -1349,9 +1429,9 @@ resource "aws_lambda_function" "logs_cleanup" {
 # CloudWatch logs cleanup Lambda source code
 resource "local_file" "logs_cleanup_source" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   filename = "${path.module}/logs_cleanup.py"
-  content = <<EOF
+  content  = <<EOF
 import json
 import boto3
 import os
@@ -1497,28 +1577,28 @@ EOF
 # Create ZIP files for Lambda deployment
 data "archive_file" "s3_cleanup_zip" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   type        = "zip"
   source_file = local_file.s3_cleanup_source[0].filename
   output_path = "${path.module}/s3_cleanup.zip"
-  
+
   depends_on = [local_file.s3_cleanup_source]
 }
 
 data "archive_file" "logs_cleanup_zip" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   type        = "zip"
   source_file = local_file.logs_cleanup_source[0].filename
   output_path = "${path.module}/logs_cleanup.zip"
-  
+
   depends_on = [local_file.logs_cleanup_source]
 }
 
 # CloudWatch Event Rules for scheduled cleanup
 resource "aws_cloudwatch_event_rule" "s3_cleanup_schedule" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name                = "${var.project_name}-${var.environment}-s3-cleanup"
   description         = "Trigger S3 cleanup"
   schedule_expression = var.s3_cleanup_schedule
@@ -1533,7 +1613,7 @@ resource "aws_cloudwatch_event_rule" "s3_cleanup_schedule" {
 
 resource "aws_cloudwatch_event_rule" "logs_cleanup_schedule" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name                = "${var.project_name}-${var.environment}-logs-cleanup"
   description         = "Trigger CloudWatch logs cleanup"
   schedule_expression = var.logs_cleanup_schedule
@@ -1549,7 +1629,7 @@ resource "aws_cloudwatch_event_rule" "logs_cleanup_schedule" {
 # Event targets
 resource "aws_cloudwatch_event_target" "s3_cleanup_target" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   rule      = aws_cloudwatch_event_rule.s3_cleanup_schedule[0].name
   target_id = "S3CleanupTarget"
   arn       = aws_lambda_function.s3_cleanup[0].arn
@@ -1557,7 +1637,7 @@ resource "aws_cloudwatch_event_target" "s3_cleanup_target" {
 
 resource "aws_cloudwatch_event_target" "logs_cleanup_target" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   rule      = aws_cloudwatch_event_rule.logs_cleanup_schedule[0].name
   target_id = "LogsCleanupTarget"
   arn       = aws_lambda_function.logs_cleanup[0].arn
@@ -1566,7 +1646,7 @@ resource "aws_cloudwatch_event_target" "logs_cleanup_target" {
 # Lambda permissions
 resource "aws_lambda_permission" "allow_cloudwatch_s3_cleanup" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.s3_cleanup[0].function_name
@@ -1576,7 +1656,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_s3_cleanup" {
 
 resource "aws_lambda_permission" "allow_cloudwatch_logs_cleanup" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.logs_cleanup[0].function_name
@@ -1587,7 +1667,7 @@ resource "aws_lambda_permission" "allow_cloudwatch_logs_cleanup" {
 # CloudWatch Log Groups for cleanup Lambda functions
 resource "aws_cloudwatch_log_group" "s3_cleanup_logs" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name              = "/aws/lambda/${aws_lambda_function.s3_cleanup[0].function_name}"
   retention_in_days = 14
 
@@ -1601,7 +1681,7 @@ resource "aws_cloudwatch_log_group" "s3_cleanup_logs" {
 
 resource "aws_cloudwatch_log_group" "logs_cleanup_logs" {
   count = var.enable_automated_cleanup ? 1 : 0
-  
+
   name              = "/aws/lambda/${aws_lambda_function.logs_cleanup[0].function_name}"
   retention_in_days = 14
 

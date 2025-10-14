@@ -153,7 +153,7 @@ variable "alarm_connection_threshold" {
 variable "alarm_freeable_memory_threshold" {
   description = "Freeable memory threshold for alarms (bytes)"
   type        = number
-  default     = 134217728  # 128 MB
+  default     = 134217728 # 128 MB
 }
 
 variable "sns_topic_arn" {

@@ -118,9 +118,9 @@ resource "aws_kms_alias" "terraform_state" {
 
 # DynamoDB table for state locking
 resource "aws_dynamodb_table" "terraform_state_lock" {
-  name           = "${var.project_name}-terraform-state-lock-${var.environment}"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = "${var.project_name}-terraform-state-lock-${var.environment}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"
@@ -203,7 +203,7 @@ resource "aws_iam_policy" "terraform_state_access" {
 # IAM role for CI/CD pipeline
 resource "aws_iam_role" "terraform_cicd_role" {
   count = var.create_cicd_role ? 1 : 0
-  
+
   name = "${var.project_name}-terraform-cicd-role-${var.environment}"
 
   assume_role_policy = jsonencode({
@@ -234,7 +234,7 @@ resource "aws_iam_role" "terraform_cicd_role" {
 
 resource "aws_iam_role_policy_attachment" "terraform_cicd_state_access" {
   count = var.create_cicd_role ? 1 : 0
-  
+
   role       = aws_iam_role.terraform_cicd_role[0].name
   policy_arn = aws_iam_policy.terraform_state_access.arn
 }
@@ -242,7 +242,7 @@ resource "aws_iam_role_policy_attachment" "terraform_cicd_state_access" {
 # State backup configuration
 resource "aws_s3_bucket" "terraform_state_backup" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   bucket = "${var.project_name}-terraform-state-backup-${var.environment}-${random_id.backup_bucket_suffix[0].hex}"
 
   tags = {
@@ -255,13 +255,13 @@ resource "aws_s3_bucket" "terraform_state_backup" {
 
 resource "random_id" "backup_bucket_suffix" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   byte_length = 4
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state_backup" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   bucket = aws_s3_bucket.terraform_state_backup[0].id
   versioning_configuration {
     status = "Enabled"
@@ -270,7 +270,7 @@ resource "aws_s3_bucket_versioning" "terraform_state_backup" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_backup" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   bucket = aws_s3_bucket.terraform_state_backup[0].id
 
   rule {
@@ -285,7 +285,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_b
 # S3 replication for state backup
 resource "aws_iam_role" "replication_role" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   name = "${var.project_name}-terraform-state-replication-${var.environment}"
 
   assume_role_policy = jsonencode({
@@ -304,7 +304,7 @@ resource "aws_iam_role" "replication_role" {
 
 resource "aws_iam_role_policy" "replication_policy" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   name = "${var.project_name}-terraform-state-replication-policy-${var.environment}"
   role = aws_iam_role.replication_role[0].id
 
@@ -351,7 +351,7 @@ resource "aws_iam_role_policy" "replication_policy" {
 
 resource "aws_s3_bucket_replication_configuration" "terraform_state_backup" {
   count = var.enable_state_backup ? 1 : 0
-  
+
   role   = aws_iam_role.replication_role[0].arn
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -375,7 +375,7 @@ resource "aws_s3_bucket_replication_configuration" "terraform_state_backup" {
 # CloudWatch monitoring for state operations
 resource "aws_cloudwatch_log_group" "terraform_state_logs" {
   count = var.enable_state_monitoring ? 1 : 0
-  
+
   name              = "/aws/s3/${aws_s3_bucket.terraform_state.bucket}"
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.terraform_state.arn

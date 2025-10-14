@@ -31,22 +31,22 @@ output "glue_crawler_role_arn" {
 output "glue_table_names" {
   description = "Map of Glue table names by category"
   value = {
-    application_logs     = aws_glue_catalog_table.application_logs.id
-    security_events      = aws_glue_catalog_table.security_events.id
-    performance_metrics  = aws_glue_catalog_table.performance_metrics.id
-    user_activity        = aws_glue_catalog_table.user_activity.id
-    system_changes       = aws_glue_catalog_table.system_changes.id
+    application_logs    = aws_glue_catalog_table.application_logs.id
+    security_events     = aws_glue_catalog_table.security_events.id
+    performance_metrics = aws_glue_catalog_table.performance_metrics.id
+    user_activity       = aws_glue_catalog_table.user_activity.id
+    system_changes      = aws_glue_catalog_table.system_changes.id
   }
 }
 
 output "glue_table_arns" {
   description = "Map of Glue table ARNs by category"
   value = {
-    application_logs     = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.application_logs.id}"
-    security_events      = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.security_events.id}"
-    performance_metrics  = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.performance_metrics.id}"
-    user_activity        = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.user_activity.id}"
-    system_changes       = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.system_changes.id}"
+    application_logs    = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.application_logs.id}"
+    security_events     = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.security_events.id}"
+    performance_metrics = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.performance_metrics.id}"
+    user_activity       = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.user_activity.id}"
+    system_changes      = "arn:aws:glue:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.streaming_logs.id}/${aws_glue_catalog_table.system_changes.id}"
   }
 }
 
@@ -71,11 +71,11 @@ output "glue_crawler_policy_arn" {
 output "glue_catalog_summary" {
   description = "Summary of Glue Data Catalog resources"
   value = {
-    database_name           = aws_glue_catalog_database.streaming_logs.id
-    crawler_name           = aws_glue_crawler.streaming_logs_crawler.id
-    crawler_schedule       = var.crawler_schedule
-    partition_projection   = var.enable_partition_projection
-    table_count           = 5
-    log_categories        = var.log_categories
+    database_name        = aws_glue_catalog_database.streaming_logs.id
+    crawler_name         = aws_glue_crawler.streaming_logs_crawler.id
+    crawler_schedule     = var.crawler_schedule
+    partition_projection = var.enable_partition_projection
+    table_count          = 5
+    log_categories       = var.log_categories
   }
 }

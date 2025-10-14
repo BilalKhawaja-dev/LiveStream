@@ -21,17 +21,17 @@ locals {
 
   # Naming convention: {project}-{component}-{environment}
   workgroup_name = "${var.project_name}-${var.environment}"
-  
+
   # Development environment optimizations
   dev_optimizations = var.environment == "dev" ? {
-    bytes_scanned_cutoff_per_query = 1073741824  # 1GB limit for dev
-    enforce_workgroup_configuration = true
-    publish_cloudwatch_metrics     = false       # Disabled for cost optimization
-    result_configuration_encryption_option = "SSE_S3"  # Standard encryption for dev
-  } : {
-    bytes_scanned_cutoff_per_query = 10737418240 # 10GB limit for prod
-    enforce_workgroup_configuration = true
-    publish_cloudwatch_metrics     = true
+    bytes_scanned_cutoff_per_query         = 1073741824 # 1GB limit for dev
+    enforce_workgroup_configuration        = true
+    publish_cloudwatch_metrics             = false    # Disabled for cost optimization
+    result_configuration_encryption_option = "SSE_S3" # Standard encryption for dev
+    } : {
+    bytes_scanned_cutoff_per_query         = 10737418240 # 10GB limit for prod
+    enforce_workgroup_configuration        = true
+    publish_cloudwatch_metrics             = true
     result_configuration_encryption_option = "SSE_KMS"
   }
 }
@@ -124,7 +124,7 @@ resource "aws_athena_workgroup" "streaming_logs" {
     # Query result location
     result_configuration {
       output_location = "s3://${var.athena_results_bucket_name}/workgroup-results/"
-      
+
       # Encryption configuration - S3 encryption for all environments
       encryption_configuration {
         encryption_option = "SSE_S3"
@@ -163,7 +163,7 @@ resource "aws_athena_database" "streaming_logs" {
 # CloudWatch Log Group for Athena query logs (development environment)
 resource "aws_cloudwatch_log_group" "athena_query_logs" {
   count = var.environment == "dev" && var.enable_query_logging ? 1 : 0
-  
+
   name              = "/aws/athena/${local.workgroup_name}"
   retention_in_days = var.log_retention_days
   kms_key_id        = var.kms_key_arn

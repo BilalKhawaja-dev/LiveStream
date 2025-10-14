@@ -182,6 +182,49 @@ resource "aws_security_group" "aurora" {
   }
 }
 
+# Security Group for ECS Tasks
+resource "aws_security_group" "ecs" {
+  name_prefix = "${var.project_name}-${var.environment}-ecs-"
+  vpc_id      = aws_vpc.main.id
+  description = "Security group for ECS tasks"
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "HTTP access from VPC"
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+    description = "HTTPS access from VPC"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "All outbound traffic"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-ecs-sg"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "ecs"
+    ManagedBy   = "terraform"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 # DB Subnet Group for Aurora
 resource "aws_db_subnet_group" "aurora" {
   name       = "${var.project_name}-${var.environment}-aurora-subnet-group"
@@ -202,7 +245,7 @@ resource "aws_vpc_endpoint" "s3" {
 
   vpc_id       = aws_vpc.main.id
   service_name = "com.amazonaws.${data.aws_region.current.name}.s3"
-  
+
   tags = {
     Name        = "${var.project_name}-${var.environment}-s3-endpoint"
     Environment = var.environment

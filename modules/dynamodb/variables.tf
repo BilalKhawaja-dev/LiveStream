@@ -17,7 +17,7 @@ variable "billing_mode" {
   description = "DynamoDB billing mode (PAY_PER_REQUEST or PROVISIONED)"
   type        = string
   default     = "PAY_PER_REQUEST"
-  
+
   validation {
     condition     = contains(["PAY_PER_REQUEST", "PROVISIONED"], var.billing_mode)
     error_message = "Billing mode must be either PAY_PER_REQUEST or PROVISIONED."
@@ -72,12 +72,12 @@ variable "stream_view_type" {
   description = "Stream view type (KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, NEW_AND_OLD_IMAGES)"
   type        = string
   default     = "NEW_AND_OLD_IMAGES"
-  
+
   validation {
     condition = contains([
-      "KEYS_ONLY", 
-      "NEW_IMAGE", 
-      "OLD_IMAGE", 
+      "KEYS_ONLY",
+      "NEW_IMAGE",
+      "OLD_IMAGE",
       "NEW_AND_OLD_IMAGES"
     ], var.stream_view_type)
     error_message = "Stream view type must be one of: KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, NEW_AND_OLD_IMAGES."
@@ -104,12 +104,12 @@ variable "log_metadata_table_config" {
   type = object({
     enable_ttl                    = optional(bool, true)
     enable_point_in_time_recovery = optional(bool, true)
-    enable_streams               = optional(bool, false)
+    enable_streams                = optional(bool, false)
   })
   default = {
     enable_ttl                    = true
     enable_point_in_time_recovery = true
-    enable_streams               = false
+    enable_streams                = false
   }
 }
 
@@ -118,12 +118,12 @@ variable "user_sessions_table_config" {
   type = object({
     enable_ttl                    = optional(bool, true)
     enable_point_in_time_recovery = optional(bool, true)
-    enable_streams               = optional(bool, false)
+    enable_streams                = optional(bool, false)
   })
   default = {
     enable_ttl                    = true
     enable_point_in_time_recovery = true
-    enable_streams               = false
+    enable_streams                = false
   }
 }
 
@@ -132,12 +132,12 @@ variable "system_config_table_config" {
   type = object({
     enable_ttl                    = optional(bool, false)
     enable_point_in_time_recovery = optional(bool, true)
-    enable_streams               = optional(bool, true)
+    enable_streams                = optional(bool, true)
   })
   default = {
     enable_ttl                    = false
     enable_point_in_time_recovery = true
-    enable_streams               = true
+    enable_streams                = true
   }
 }
 
@@ -146,12 +146,12 @@ variable "audit_trail_table_config" {
   type = object({
     enable_ttl                    = optional(bool, true)
     enable_point_in_time_recovery = optional(bool, true)
-    enable_streams               = optional(bool, false)
+    enable_streams                = optional(bool, false)
   })
   default = {
     enable_ttl                    = true
     enable_point_in_time_recovery = true
-    enable_streams               = false
+    enable_streams                = false
   }
 }
 
@@ -239,7 +239,7 @@ variable "autoscaling_max_write_capacity" {
 variable "backup_storage_threshold_bytes" {
   description = "Backup storage usage threshold in bytes for alarms"
   type        = number
-  default     = 10737418240  # 10 GB
+  default     = 10737418240 # 10 GB
 }
 
 variable "enable_backup_validation" {
@@ -251,7 +251,7 @@ variable "enable_backup_validation" {
 variable "backup_validation_schedule" {
   description = "Schedule expression for backup validation (cron or rate)"
   type        = string
-  default     = "rate(6 hours)"  # Run every 6 hours
+  default     = "rate(6 hours)" # Run every 6 hours
 }
 
 variable "log_retention_days" {

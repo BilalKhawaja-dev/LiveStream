@@ -137,7 +137,7 @@ create_secret() {
         exit 1
     fi
     
-    aws secretsmanager create-secret \
+    if aws secretsmanager create-secret \
         --name "$secret_name" \
         --description "Terraform variable for ${PROJECT_NAME} ${env} environment" \
         --secret-string "$value" \
@@ -146,9 +146,12 @@ create_secret() {
             {"Key": "Environment", "Value": "'$env'"},
             {"Key": "ManagedBy", "Value": "terraform-secrets-manager"},
             {"Key": "SecretType", "Value": "terraform-variable"}
-        ]' > /dev/null
-    
-    log_success "Secret created: $secret_name"
+        ]' > /dev/null; then
+        log_success "Secret created: $secret_name"
+    else
+        log_error "Failed to create secret: $secret_name"
+        exit 1
+    fi
 }
 
 # Get secret
@@ -307,6 +310,8 @@ import_secrets() {
     
     # Import each key-value pair
     local count=0
+    local import_errors=0
+    
     while IFS="=" read -r key value; do
         if [ -n "$key" ] && [ -n "$value" ]; then
             local secret_name=$(get_secret_name "$env" "$key")
@@ -314,14 +319,27 @@ import_secrets() {
             # Check if secret exists
             if aws secretsmanager describe-secret --secret-id "$secret_name" &> /dev/null; then
                 log_warning "Secret exists, updating: $secret_name"
-                update_secret "$env" "$key" "$value"
+                if update_secret "$env" "$key" "$value"; then
+                    ((count++))
+                else
+                    log_error "Failed to update secret: $secret_name"
+                    ((import_errors++))
+                fi
             else
-                create_secret "$env" "$key" "$value"
+                if create_secret "$env" "$key" "$value"; then
+                    ((count++))
+                else
+                    log_error "Failed to create secret: $secret_name"
+                    ((import_errors++))
+                fi
             fi
-            
-            ((count++))
         fi
     done < <(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$file")
+    
+    if [ $import_errors -gt 0 ]; then
+        log_error "Failed to import $import_errors secrets"
+        exit 1
+    fi
     
     log_success "Imported $count secrets for environment: $env"
 }

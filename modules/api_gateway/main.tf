@@ -9,7 +9,7 @@ data "aws_region" "current" {}
 resource "aws_api_gateway_rest_api" "frontend_api" {
   name        = "${var.project_name}-${var.environment}-frontend-api"
   description = "API Gateway for streaming platform frontend applications"
-  
+
   endpoint_configuration {
     types = ["REGIONAL"]
   }
@@ -160,34 +160,34 @@ resource "aws_api_gateway_resource" "dev_proxy" {
 locals {
   app_resources = {
     viewer = {
-      resource = aws_api_gateway_resource.viewer
+      resource       = aws_api_gateway_resource.viewer
       proxy_resource = aws_api_gateway_resource.viewer_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
     creator = {
-      resource = aws_api_gateway_resource.creator
+      resource       = aws_api_gateway_resource.creator
       proxy_resource = aws_api_gateway_resource.creator_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
     admin = {
-      resource = aws_api_gateway_resource.admin
+      resource       = aws_api_gateway_resource.admin
       proxy_resource = aws_api_gateway_resource.admin_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
     support = {
-      resource = aws_api_gateway_resource.support
+      resource       = aws_api_gateway_resource.support
       proxy_resource = aws_api_gateway_resource.support_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
     analytics = {
-      resource = aws_api_gateway_resource.analytics
+      resource       = aws_api_gateway_resource.analytics
       proxy_resource = aws_api_gateway_resource.analytics_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
     dev = {
-      resource = aws_api_gateway_resource.dev
+      resource       = aws_api_gateway_resource.dev
       proxy_resource = aws_api_gateway_resource.dev_proxy
-      alb_dns = var.alb_dns_name
+      alb_dns        = var.alb_dns_name
     }
   }
 }
@@ -210,8 +210,8 @@ resource "aws_api_gateway_integration" "app_root_integration" {
   http_method = aws_api_gateway_method.app_root_method[each.key].http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${each.value.alb_dns}/${each.key}/{proxy}"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${each.value.alb_dns}/${each.key}/{proxy}"
 
   request_parameters = {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -240,8 +240,8 @@ resource "aws_api_gateway_integration" "app_proxy_integration" {
   http_method = aws_api_gateway_method.app_proxy_method[each.key].http_method
 
   integration_http_method = "ANY"
-  type                   = "HTTP_PROXY"
-  uri                    = "http://${each.value.alb_dns}/${each.key}/{proxy}"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${each.value.alb_dns}/${each.key}/{proxy}"
 
   request_parameters = {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -347,18 +347,18 @@ resource "aws_api_gateway_stage" "frontend_stage" {
   # Enable logging
   access_log_destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
   access_log_format = jsonencode({
-    requestId      = "$requestId"
-    ip             = "$sourceIp"
-    caller         = "$caller"
-    user           = "$user"
-    requestTime    = "$requestTime"
-    httpMethod     = "$httpMethod"
-    resourcePath   = "$resourcePath"
-    status         = "$status"
-    protocol       = "$protocol"
-    responseLength = "$responseLength"
-    responseTime   = "$responseTime"
-    error          = "$error.message"
+    requestId        = "$requestId"
+    ip               = "$sourceIp"
+    caller           = "$caller"
+    user             = "$user"
+    requestTime      = "$requestTime"
+    httpMethod       = "$httpMethod"
+    resourcePath     = "$resourcePath"
+    status           = "$status"
+    protocol         = "$protocol"
+    responseLength   = "$responseLength"
+    responseTime     = "$responseTime"
+    error            = "$error.message"
     integrationError = "$integrationError"
   })
 
@@ -409,13 +409,13 @@ resource "aws_api_gateway_method_settings" "frontend_settings" {
 
   settings {
     metrics_enabled    = true
-    logging_level     = var.api_gateway_logging_level
+    logging_level      = var.api_gateway_logging_level
     data_trace_enabled = var.enable_data_trace
-    
+
     # Throttling settings
     throttling_rate_limit  = var.throttling_rate_limit
     throttling_burst_limit = var.throttling_burst_limit
-    
+
     # Caching settings
     caching_enabled      = var.enable_caching
     cache_ttl_in_seconds = var.cache_ttl_seconds
@@ -440,8 +440,8 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ApiName   = aws_api_gateway_rest_api.frontend_api.name
-    Stage     = aws_api_gateway_stage.frontend_stage.stage_name
+    ApiName = aws_api_gateway_rest_api.frontend_api.name
+    Stage   = aws_api_gateway_stage.frontend_stage.stage_name
   }
 
   tags = merge(var.tags, {
@@ -465,8 +465,8 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ApiName   = aws_api_gateway_rest_api.frontend_api.name
-    Stage     = aws_api_gateway_stage.frontend_stage.stage_name
+    ApiName = aws_api_gateway_rest_api.frontend_api.name
+    Stage   = aws_api_gateway_stage.frontend_stage.stage_name
   }
 
   tags = merge(var.tags, {
@@ -490,8 +490,8 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    ApiName   = aws_api_gateway_rest_api.frontend_api.name
-    Stage     = aws_api_gateway_stage.frontend_stage.stage_name
+    ApiName = aws_api_gateway_rest_api.frontend_api.name
+    Stage   = aws_api_gateway_stage.frontend_stage.stage_name
   }
 
   tags = merge(var.tags, {

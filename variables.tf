@@ -140,6 +140,10 @@ variable "aurora_monitoring_interval" {
   description = "Enhanced monitoring interval in seconds"
   type        = number
   default     = 60 # Development optimized
+  validation {
+    condition     = contains([0, 1, 5, 10, 15, 30, 60], var.aurora_monitoring_interval)
+    error_message = "Enhanced monitoring interval must be one of: 0, 1, 5, 10, 15, 30, 60 seconds."
+  }
 }
 
 variable "aurora_performance_insights_enabled" {
@@ -170,6 +174,10 @@ variable "aurora_alarm_cpu_threshold" {
   description = "CPU utilization threshold for alarms (%)"
   type        = number
   default     = 80
+  validation {
+    condition     = var.aurora_alarm_cpu_threshold >= 10 && var.aurora_alarm_cpu_threshold <= 100
+    error_message = "CPU threshold must be between 10 and 100 percent."
+  }
 }
 
 variable "aurora_alarm_connection_threshold" {
@@ -320,7 +328,7 @@ variable "dynamodb_autoscaling_max_write_capacity" {
 variable "dynamodb_backup_storage_threshold_bytes" {
   description = "Backup storage usage threshold in bytes for alarms"
   type        = number
-  default     = 10737418240  # 10 GB
+  default     = 10737418240 # 10 GB
 }
 
 variable "dynamodb_enable_backup_validation" {
@@ -477,7 +485,7 @@ variable "iam_require_mfa" {
 variable "iam_max_session_duration" {
   description = "Maximum session duration for role assumption (seconds)"
   type        = number
-  default     = 3600  # 1 hour
+  default     = 3600 # 1 hour
 }
 
 variable "iam_enable_cross_account_access" {
@@ -635,4 +643,80 @@ variable "monitoring_logs_cleanup_schedule" {
   description = "Schedule expression for CloudWatch logs cleanup"
   type        = string
   default     = "rate(3 days)"
+}
+
+# ECS Configuration
+variable "enable_ecs" {
+  description = "Enable ECS for containerized applications"
+  type        = bool
+  default     = false  # Disabled by default for cost optimization
+}
+
+variable "ecs_applications" {
+  description = "List of ECS applications to deploy"
+  type        = list(string)
+  default = [
+    "viewer-portal",
+    "creator-dashboard",
+    "admin-portal",
+    "support-system",
+    "analytics-dashboard",
+    "developer-console"
+  ]
+}
+
+variable "ecs_task_cpu" {
+  description = "CPU units for ECS tasks"
+  type        = number
+  default     = 256  # Development optimized
+}
+
+variable "ecs_task_memory" {
+  description = "Memory for ECS tasks (MB)"
+  type        = number
+  default     = 512  # Development optimized
+}
+
+variable "ecs_desired_count" {
+  description = "Desired number of ECS tasks per service"
+  type        = number
+  default     = 1  # Development optimized
+}
+
+variable "ecs_use_spot_instances" {
+  description = "Use Fargate Spot instances for cost optimization"
+  type        = bool
+  default     = true  # Cost optimization
+}
+
+variable "ecs_enable_container_insights" {
+  description = "Enable CloudWatch Container Insights"
+  type        = bool
+  default     = false  # Disabled for cost optimization in dev
+}
+
+# SSL Certificate
+variable "ssl_certificate_arn" {
+  description = "ARN of SSL certificate for ALB (leave empty to skip HTTPS)"
+  type        = string
+  default     = ""  # No SSL by default for development
+}
+
+# Media Services Configuration
+variable "enable_media_services" {
+  description = "Enable media services for streaming"
+  type        = bool
+  default     = false
+}
+
+variable "enable_cdn" {
+  description = "Enable CloudFront CDN"
+  type        = bool
+  default     = false
+}
+
+variable "enable_streaming" {
+  description = "Enable MediaLive streaming (WARNING: Costs ~$10/day when running)"
+  type        = bool
+  default     = false
 }

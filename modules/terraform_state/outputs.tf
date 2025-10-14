@@ -118,14 +118,14 @@ output "backend_config_by_environment" {
 output "state_management_summary" {
   description = "Summary of Terraform state management configuration"
   value = {
-    state_bucket_name = aws_s3_bucket.terraform_state.bucket
-    lock_table_name   = aws_dynamodb_table.terraform_state_lock.name
-    kms_key_alias     = aws_kms_alias.terraform_state.name
-    backup_enabled    = var.enable_state_backup
+    state_bucket_name  = aws_s3_bucket.terraform_state.bucket
+    lock_table_name    = aws_dynamodb_table.terraform_state_lock.name
+    kms_key_alias      = aws_kms_alias.terraform_state.name
+    backup_enabled     = var.enable_state_backup
     monitoring_enabled = var.enable_state_monitoring
-    cicd_role_created = var.create_cicd_role
-    environment       = var.environment
-    region           = data.aws_region.current.name
+    cicd_role_created  = var.create_cicd_role
+    environment        = var.environment
+    region             = data.aws_region.current.name
   }
 }
 

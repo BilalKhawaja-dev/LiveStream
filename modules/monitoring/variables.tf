@@ -186,7 +186,7 @@ variable "enable_cost_optimization_lambda" {
 variable "cost_optimization_schedule" {
   description = "Schedule expression for cost optimization analysis"
   type        = string
-  default     = "rate(7 days)"  # Weekly analysis
+  default     = "rate(7 days)" # Weekly analysis
 }
 
 # Automated cleanup configuration
@@ -217,11 +217,57 @@ variable "log_cleanup_retention_days" {
 variable "s3_cleanup_schedule" {
   description = "Schedule expression for S3 cleanup"
   type        = string
-  default     = "rate(7 days)"  # Weekly cleanup
+  default     = "rate(7 days)" # Weekly cleanup
 }
 
 variable "logs_cleanup_schedule" {
   description = "Schedule expression for CloudWatch logs cleanup"
   type        = string
-  default     = "rate(3 days)"  # Every 3 days
+  default     = "rate(3 days)" # Every 3 days
+}
+
+# Security and encryption configuration
+variable "kms_deletion_window" {
+  description = "KMS key deletion window in days"
+  type        = number
+  default     = 7
+  validation {
+    condition     = var.kms_deletion_window >= 7 && var.kms_deletion_window <= 30
+    error_message = "KMS deletion window must be between 7 and 30 days."
+  }
+}
+
+variable "enable_sns_encryption" {
+  description = "Enable SNS topic encryption with customer-managed keys"
+  type        = bool
+  default     = true
+}
+
+variable "sns_message_retention_seconds" {
+  description = "SNS message retention period in seconds"
+  type        = number
+  default     = 1209600 # 14 days
+  validation {
+    condition     = var.sns_message_retention_seconds >= 60 && var.sns_message_retention_seconds <= 1209600
+    error_message = "SNS message retention must be between 60 seconds and 14 days."
+  }
+}
+
+# Lambda Function URL configuration
+variable "enable_lambda_function_urls" {
+  description = "Enable Lambda function URLs with authentication"
+  type        = bool
+  default     = false
+}
+
+variable "allowed_origins" {
+  description = "Allowed origins for Lambda function URL CORS"
+  type        = list(string)
+  default     = []
+  validation {
+    condition = alltrue([
+      for origin in var.allowed_origins : can(regex("^https://", origin))
+    ])
+    error_message = "All origins must use HTTPS protocol."
+  }
 }

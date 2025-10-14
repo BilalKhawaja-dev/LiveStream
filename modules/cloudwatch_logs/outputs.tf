@@ -145,11 +145,11 @@ output "sns_topic_arn" {
 output "alarm_names" {
   description = "Map of CloudWatch alarm names"
   value = var.enable_alarms ? {
-    high_error_rate   = aws_cloudwatch_metric_alarm.high_error_rate[0].alarm_name
-    log_volume_spike  = aws_cloudwatch_metric_alarm.log_volume_spike[0].alarm_name
-    payment_errors    = aws_cloudwatch_metric_alarm.payment_errors[0].alarm_name
-    api_gateway_4xx   = aws_cloudwatch_metric_alarm.api_gateway_4xx[0].alarm_name
-    api_gateway_5xx   = aws_cloudwatch_metric_alarm.api_gateway_5xx[0].alarm_name
-    medialive_errors  = aws_cloudwatch_metric_alarm.medialive_errors[0].alarm_name
+    high_error_rate  = aws_cloudwatch_metric_alarm.high_error_rate[0].alarm_name
+    log_volume_spike = aws_cloudwatch_metric_alarm.log_volume_spike[0].alarm_name
+    payment_errors   = aws_cloudwatch_metric_alarm.payment_errors[0].alarm_name
+    api_gateway_4xx  = aws_cloudwatch_metric_alarm.api_gateway_4xx[0].alarm_name
+    api_gateway_5xx  = aws_cloudwatch_metric_alarm.api_gateway_5xx[0].alarm_name
+    medialive_errors = aws_cloudwatch_metric_alarm.medialive_errors[0].alarm_name
   } : {}
 }

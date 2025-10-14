@@ -229,9 +229,42 @@ rollback_to_backup() {
         exit 1
     fi
     
-    # Push state
+    # Push state with error handling
     log_info "Pushing rollback state..."
-    terraform state push "$rollback_file"
+    local push_exit_code
+    if terraform state push "$rollback_file"; then
+        push_exit_code=$?
+        if [ $push_exit_code -ne 0 ]; then
+            log_error "Failed to push rollback state (exit code: $push_exit_code)"
+            log_error "State file may be corrupted or incompatible"
+            
+            # Create backup of current state before failing
+            local emergency_backup="emergency-backup-$(date +%Y%m%d-%H%M%S).tfstate"
+            if terraform state pull > "$emergency_backup" 2>/dev/null; then
+                log_warning "Current state backed up to: $emergency_backup"
+            else
+                log_error "Failed to create emergency backup"
+            fi
+            
+            rm -f "$rollback_file"
+            exit 1
+        fi
+    else
+        push_exit_code=$?
+        log_error "Failed to push rollback state (exit code: $push_exit_code)"
+        log_error "State file may be corrupted or incompatible"
+        
+        # Create backup of current state before failing
+        local emergency_backup="emergency-backup-$(date +%Y%m%d-%H%M%S).tfstate"
+        if terraform state pull > "$emergency_backup" 2>/dev/null; then
+            log_warning "Current state backed up to: $emergency_backup"
+        else
+            log_error "Failed to create emergency backup"
+        fi
+        
+        rm -f "$rollback_file"
+        exit 1
+    fi
     
     # Validate rollback
     log_info "Validating rollback..."

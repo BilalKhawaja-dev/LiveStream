@@ -37,7 +37,7 @@ variable "kms_key_arn" {
 variable "crawler_schedule" {
   description = "Schedule for running the Glue Crawler (cron expression)"
   type        = string
-  default     = "cron(0 2 * * ? *)"  # Daily at 2 AM UTC
+  default     = "cron(0 2 * * ? *)" # Daily at 2 AM UTC
 }
 
 variable "enable_crawler" {
@@ -64,7 +64,7 @@ variable "crawler_recrawl_behavior" {
   description = "Recrawl behavior for the Glue Crawler"
   type        = string
   default     = "CRAWL_EVERYTHING"
-  
+
   validation {
     condition = contains([
       "CRAWL_EVERYTHING",
@@ -78,7 +78,7 @@ variable "schema_change_update_behavior" {
   description = "How to handle schema changes in the Glue Crawler"
   type        = string
   default     = "UPDATE_IN_DATABASE"
-  
+
   validation {
     condition = contains([
       "UPDATE_IN_DATABASE",
@@ -92,7 +92,7 @@ variable "schema_change_delete_behavior" {
   description = "How to handle deleted schemas in the Glue Crawler"
   type        = string
   default     = "LOG"
-  
+
   validation {
     condition = contains([
       "LOG",
@@ -109,7 +109,7 @@ variable "log_categories" {
   type        = list(string)
   default = [
     "application-logs",
-    "security-events", 
+    "security-events",
     "performance-metrics",
     "user-activity",
     "system-changes"

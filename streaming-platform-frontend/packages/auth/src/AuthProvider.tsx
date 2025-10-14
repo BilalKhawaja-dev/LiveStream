@@ -44,7 +44,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           role: 'creator',
         });
       } catch (error) {
-        console.error('Auth check failed:', error);
+        // Use secure logging to prevent log injection
+        import('@streaming/shared').then(({ secureLogger }) => {
+          secureLogger.error('Auth check failed', error, { component: 'AuthProvider', action: 'checkAuth' });
+        });
       } finally {
         setIsLoading(false);
       }
@@ -64,7 +67,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role: 'creator',
       });
     } catch (error) {
-      console.error('Login failed:', error);
+      // Use secure logging to prevent log injection
+      import('@streaming/shared').then(({ secureLogger }) => {
+        secureLogger.error('Login failed', error, { component: 'AuthProvider', action: 'login' });
+      });
       throw error;
     } finally {
       setIsLoading(false);

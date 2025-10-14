@@ -69,53 +69,53 @@ resource "aws_secretsmanager_secret_version" "aurora_master" {
 
 # Aurora Serverless v2 cluster
 resource "aws_rds_cluster" "aurora" {
-  cluster_identifier              = "${var.project_name}-${var.environment}-aurora-cluster"
-  engine                         = "aurora-mysql"
-  engine_version                 = var.engine_version
-  engine_mode                    = "provisioned"
-  database_name                  = var.database_name
-  master_username                = var.master_username
-  manage_master_user_password    = false
-  master_password                = random_password.aurora_master.result
-  
+  cluster_identifier          = "${var.project_name}-${var.environment}-aurora-cluster"
+  engine                      = "aurora-mysql"
+  engine_version              = var.engine_version
+  engine_mode                 = "provisioned"
+  database_name               = var.database_name
+  master_username             = var.master_username
+  manage_master_user_password = false
+  master_password             = random_password.aurora_master.result
+
   # Backup configuration
-  backup_retention_period         = var.backup_retention_period
-  preferred_backup_window        = var.backup_window
-  preferred_maintenance_window   = var.maintenance_window
-  copy_tags_to_snapshot          = true
-  delete_automated_backups       = var.environment != "prod"
-  
+  backup_retention_period      = var.backup_retention_period
+  preferred_backup_window      = var.backup_window
+  preferred_maintenance_window = var.maintenance_window
+  copy_tags_to_snapshot        = true
+  delete_automated_backups     = var.environment != "prod"
+
   # Security and encryption
-  storage_encrypted              = true
-  kms_key_id                    = aws_kms_key.aurora.arn
-  vpc_security_group_ids        = [var.aurora_security_group_id]
-  db_subnet_group_name          = aws_db_subnet_group.aurora.name
-  
+  storage_encrypted      = true
+  kms_key_id             = aws_kms_key.aurora.arn
+  vpc_security_group_ids = [var.aurora_security_group_id]
+  db_subnet_group_name   = aws_db_subnet_group.aurora.name
+
   # Serverless v2 scaling configuration
   serverlessv2_scaling_configuration {
     max_capacity = var.max_capacity
     min_capacity = var.min_capacity
   }
-  
+
   # Monitoring and logging
   enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
-  monitoring_interval            = var.monitoring_interval
-  monitoring_role_arn           = var.monitoring_interval > 0 ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
-  
+  monitoring_interval             = var.monitoring_interval
+  monitoring_role_arn             = var.monitoring_interval > 0 ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
+
   # Performance Insights
   performance_insights_enabled          = var.performance_insights_enabled
-  performance_insights_kms_key_id      = var.performance_insights_enabled ? aws_kms_key.aurora.arn : null
+  performance_insights_kms_key_id       = var.performance_insights_enabled ? aws_kms_key.aurora.arn : null
   performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
-  
+
   # Network and availability
   availability_zones = var.availability_zones
-  port              = var.port
-  
+  port               = var.port
+
   # Deletion protection
-  deletion_protection = var.deletion_protection
-  skip_final_snapshot = var.environment != "prod"
+  deletion_protection       = var.deletion_protection
+  skip_final_snapshot       = var.environment != "prod"
   final_snapshot_identifier = var.environment == "prod" ? "${var.project_name}-${var.environment}-aurora-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
-  
+
   # Apply changes immediately in development
   apply_immediately = var.environment != "prod"
 
@@ -139,19 +139,19 @@ resource "aws_rds_cluster_instance" "aurora_instances" {
   instance_class     = "db.serverless"
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
-  
+
   # Monitoring
   monitoring_interval = var.monitoring_interval
   monitoring_role_arn = var.monitoring_interval > 0 ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
-  
+
   # Performance Insights
   performance_insights_enabled          = var.performance_insights_enabled
-  performance_insights_kms_key_id      = var.performance_insights_enabled ? aws_kms_key.aurora.arn : null
+  performance_insights_kms_key_id       = var.performance_insights_enabled ? aws_kms_key.aurora.arn : null
   performance_insights_retention_period = var.performance_insights_enabled ? var.performance_insights_retention_period : null
-  
+
   # Auto minor version upgrade
   auto_minor_version_upgrade = var.auto_minor_version_upgrade
-  
+
   # Apply changes immediately in development
   apply_immediately = var.environment != "prod"
 
@@ -166,7 +166,7 @@ resource "aws_rds_cluster_instance" "aurora_instances" {
 # CloudWatch Log Groups for Aurora logs
 resource "aws_cloudwatch_log_group" "aurora_logs" {
   for_each = toset(var.enabled_cloudwatch_logs_exports)
-  
+
   name              = "/aws/rds/cluster/${var.project_name}-${var.environment}-aurora-cluster/${each.value}"
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.aurora.arn
@@ -182,7 +182,7 @@ resource "aws_cloudwatch_log_group" "aurora_logs" {
 # Enhanced monitoring IAM role (conditional)
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   count = var.monitoring_interval > 0 ? 1 : 0
-  
+
   name = "${var.project_name}-${var.environment}-rds-enhanced-monitoring-role"
 
   assume_role_policy = jsonencode({
@@ -208,7 +208,7 @@ resource "aws_iam_role" "rds_enhanced_monitoring" {
 
 resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
   count = var.monitoring_interval > 0 ? 1 : 0
-  
+
   role       = aws_iam_role.rds_enhanced_monitoring[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
 }
@@ -219,9 +219,9 @@ resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
 # SNS topic for Aurora alarms (if not provided)
 resource "aws_sns_topic" "aurora_alarms" {
   count = var.enable_cloudwatch_alarms && var.sns_topic_arn == "" ? 1 : 0
-  
-  name         = "${var.project_name}-${var.environment}-aurora-alarms"
-  display_name = "Aurora Database Alarms"
+
+  name              = "${var.project_name}-${var.environment}-aurora-alarms"
+  display_name      = "Aurora Database Alarms"
   kms_master_key_id = aws_kms_key.aurora.arn
 
   tags = {
@@ -239,7 +239,7 @@ locals {
 # CPU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
   count = var.enable_cloudwatch_alarms ? var.instance_count : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-cpu-utilization-${count.index + 1}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -268,7 +268,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_cpu_utilization" {
 # Database Connection Count Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_database_connections" {
   count = var.enable_cloudwatch_alarms ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-database-connections"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -297,7 +297,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_database_connections" {
 # Freeable Memory Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_freeable_memory" {
   count = var.enable_cloudwatch_alarms ? var.instance_count : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-freeable-memory-${count.index + 1}"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
@@ -326,7 +326,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_freeable_memory" {
 # Aurora Serverless v2 ACU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_serverless_acu_utilization" {
   count = var.enable_cloudwatch_alarms ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-acu-utilization"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "3"
@@ -334,7 +334,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_serverless_acu_utilization" {
   namespace           = "AWS/RDS"
   period              = "300"
   statistic           = "Average"
-  threshold           = var.max_capacity * 0.8  # 80% of max capacity
+  threshold           = var.max_capacity * 0.8 # 80% of max capacity
   alarm_description   = "This metric monitors Aurora Serverless v2 ACU utilization"
   alarm_actions       = [local.sns_topic_arn]
   ok_actions          = [local.sns_topic_arn]
@@ -355,13 +355,13 @@ resource "aws_cloudwatch_metric_alarm" "aurora_serverless_acu_utilization" {
 # Backup Failure Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_backup_failure" {
   count = var.backup_alarm_enabled ? 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-backup-failure"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "1"
   metric_name         = "BackupRetentionPeriodStorageUsed"
   namespace           = "AWS/RDS"
-  period              = "86400"  # 24 hours
+  period              = "86400" # 24 hours
   statistic           = "Maximum"
   threshold           = 1
   alarm_description   = "This alarm triggers when Aurora backup fails or is missing"
@@ -384,7 +384,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_backup_failure" {
 # Read Latency Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_read_latency" {
   count = var.enable_cloudwatch_alarms ? var.instance_count : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-read-latency-${count.index + 1}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -392,7 +392,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_read_latency" {
   namespace           = "AWS/RDS"
   period              = "300"
   statistic           = "Average"
-  threshold           = 0.2  # 200ms
+  threshold           = 0.2 # 200ms
   alarm_description   = "This metric monitors Aurora instance read latency"
   alarm_actions       = [local.sns_topic_arn]
   ok_actions          = [local.sns_topic_arn]
@@ -413,7 +413,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_read_latency" {
 # Write Latency Alarm
 resource "aws_cloudwatch_metric_alarm" "aurora_write_latency" {
   count = var.enable_cloudwatch_alarms ? var.instance_count : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-write-latency-${count.index + 1}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -421,7 +421,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_write_latency" {
   namespace           = "AWS/RDS"
   period              = "300"
   statistic           = "Average"
-  threshold           = 0.2  # 200ms
+  threshold           = 0.2 # 200ms
   alarm_description   = "This metric monitors Aurora instance write latency"
   alarm_actions       = [local.sns_topic_arn]
   ok_actions          = [local.sns_topic_arn]
@@ -442,7 +442,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_write_latency" {
 # Aurora Replica Lag Alarm (if multiple instances)
 resource "aws_cloudwatch_metric_alarm" "aurora_replica_lag" {
   count = var.enable_cloudwatch_alarms && var.instance_count > 1 ? var.instance_count - 1 : 0
-  
+
   alarm_name          = "${var.project_name}-${var.environment}-aurora-replica-lag-${count.index + 2}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -450,7 +450,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_replica_lag" {
   namespace           = "AWS/RDS"
   period              = "300"
   statistic           = "Average"
-  threshold           = 1000  # 1 second in milliseconds
+  threshold           = 1000 # 1 second in milliseconds
   alarm_description   = "This metric monitors Aurora replica lag"
   alarm_actions       = [local.sns_topic_arn]
   ok_actions          = [local.sns_topic_arn]

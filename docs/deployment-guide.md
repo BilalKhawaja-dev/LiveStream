@@ -455,10 +455,10 @@ terraform output monitoring_dashboard_url
 
 ```bash
 # Create manual Aurora snapshot
-aws rds create-db-cluster-snapshot --db-cluster-identifier streaming-logs-aurora --db-cluster-snapshot-identifier manual-backup-$(date +%Y%m%d)
+aws rds create-db-cluster-snapshot --db-cluster-identifier ${PROJECT_NAME}-aurora-${ENVIRONMENT} --db-cluster-snapshot-identifier manual-backup-$(date +%Y%m%d)
 
 # Export DynamoDB table
-aws dynamodb create-backup --table-name streaming-logs-metadata --backup-name manual-backup-$(date +%Y%m%d)
+aws dynamodb create-backup --table-name ${PROJECT_NAME}-metadata-${ENVIRONMENT} --backup-name manual-backup-$(date +%Y%m%d)
 ```
 
 ### Recovery Testing
@@ -468,7 +468,7 @@ aws dynamodb create-backup --table-name streaming-logs-metadata --backup-name ma
 ./tests/integration_test.sh --test-recovery
 
 # Validate backup integrity
-aws rds describe-db-cluster-snapshots --db-cluster-identifier streaming-logs-aurora
+aws rds describe-db-cluster-snapshots --db-cluster-identifier ${PROJECT_NAME}-aurora-${ENVIRONMENT}
 ```
 
 ## Support and Maintenance

@@ -253,11 +253,23 @@ plan_all_environments() {
             terraform workspace new "$env"
         fi
         
-        # Run plan
-        if terraform plan -var-file="terraform.tfvars" -out="$env.tfplan"; then
+        # Run plan with comprehensive error handling
+        local plan_output
+        local plan_exit_code
+        
+        log_info "Running terraform plan for $env..."
+        set +e  # Temporarily disable exit on error
+        plan_output=$(terraform plan -var-file="terraform.tfvars" -out="$env.tfplan" 2>&1)
+        plan_exit_code=$?
+        set -e  # Re-enable exit on error
+        
+        if [ $plan_exit_code -eq 0 ]; then
             log_success "Plan successful for environment: $env"
+            echo "$plan_output" > "$env-plan.log"
         else
-            log_error "Plan failed for environment: $env"
+            log_error "Plan failed for environment: $env (exit code: $plan_exit_code)"
+            echo "$plan_output" > "$env-plan-error.log"
+            log_error "Error details saved to: $env-plan-error.log"
             failed_envs+=("$env")
         fi
     done

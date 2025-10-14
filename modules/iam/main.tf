@@ -1037,10 +1037,10 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "DenyInsecureConnections"
-        Effect = "Deny"
+        Sid       = "DenyInsecureConnections"
+        Effect    = "Deny"
         Principal = "*"
-        Action = "s3:*"
+        Action    = "s3:*"
         Resource = [
           "arn:aws:s3:::${var.s3_bucket_names[count.index]}",
           "arn:aws:s3:::${var.s3_bucket_names[count.index]}/*"
@@ -1076,6 +1076,108 @@ resource "aws_s3_bucket_policy" "log_bucket_policy" {
   })
 }
 
+# ECS Task Execution Role
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "${var.project_name}-${var.environment}-ecs-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-ecs-execution-role"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "ecs"
+  }
+}
+
+# Attach AWS managed policy for ECS task execution
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# ECS Task Role
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.project_name}-${var.environment}-ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-ecs-task-role"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "ecs"
+  }
+}
+
+resource "aws_iam_role_policy" "ecs_task_policy" {
+  name = "${var.project_name}-${var.environment}-ecs-task-policy"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/${var.project_name}-*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = var.dynamodb_table_arns
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = concat(var.s3_bucket_arns, [for arn in var.s3_bucket_arns : "${arn}/*"])
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = var.kms_key_arns
+      }
+    ]
+  })
+}
+
 # KMS Key Policy for cross-service access
 resource "aws_kms_key_policy" "service_key_policy" {
   count  = length(var.kms_key_ids)
@@ -1105,7 +1207,9 @@ resource "aws_kms_key_policy" "service_key_policy" {
             aws_iam_role.dynamodb_service_role.arn,
             aws_iam_role.glue_service_role.arn,
             aws_iam_role.athena_service_role.arn,
-            aws_iam_role.lambda_execution_role.arn
+            aws_iam_role.lambda_execution_role.arn,
+            aws_iam_role.ecs_execution_role.arn,
+            aws_iam_role.ecs_task_role.arn
           ]
         }
         Action = [

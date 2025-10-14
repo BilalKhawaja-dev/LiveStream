@@ -287,7 +287,13 @@ export const ContentManager: React.FC = () => {
         message: 'Content has been successfully deleted',
       });
     } catch (error) {
-      console.error('Error deleting content:', error);
+      // Use secure logging to prevent log injection
+      import('@streaming/shared').then(({ secureLogger }) => {
+        secureLogger.error('Error deleting content', error, { 
+          component: 'ContentManager',
+          action: 'deleteContent' 
+        });
+      });
       toast({
         title: 'Delete Failed',
         description: 'Unable to delete content. Please try again.',
@@ -330,7 +336,13 @@ export const ContentManager: React.FC = () => {
         message: 'Content has been successfully updated',
       });
     } catch (error) {
-      console.error('Error updating content:', error);
+      // Use secure logging to prevent log injection
+      import('@streaming/shared').then(({ secureLogger }) => {
+        secureLogger.error('Error updating content', error, { 
+          component: 'ContentManager',
+          action: 'updateContent' 
+        });
+      });
       toast({
         title: 'Update Failed',
         description: 'Unable to update content. Please try again.',
@@ -356,7 +368,13 @@ export const ContentManager: React.FC = () => {
         message: `Content is now ${newVisibility}`,
       });
     } catch (error) {
-      console.error('Error updating visibility:', error);
+      // Use secure logging to prevent log injection
+      import('@streaming/shared').then(({ secureLogger }) => {
+        secureLogger.error('Error updating visibility', error, { 
+          component: 'ContentManager',
+          action: 'updateVisibility' 
+        });
+      });
     }
   };
 

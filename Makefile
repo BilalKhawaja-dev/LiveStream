@@ -1,11 +1,9 @@
-# Makefile for Terraform Infrastructure Management
-# Centralized Logging Infrastructure
+# Makefile for Terraform Streaming Platform Infrastructure
 
-.PHONY: help init plan apply destroy validate test clean format security lint
+.PHONY: help init plan apply destroy validate format clean test
 
 # Default environment
 ENV ?= dev
-REGION ?= eu-west-2
 
 # Colors for output
 RED := \033[0;31m
@@ -15,222 +13,188 @@ BLUE := \033[0;34m
 NC := \033[0m # No Color
 
 help: ## Show this help message
-	@echo "$(BLUE)Terraform Infrastructure Management$(NC)"
-	@echo "$(BLUE)====================================$(NC)"
-	@echo ""
-	@echo "$(GREEN)Available targets:$(NC)"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(YELLOW)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@echo ""
-	@echo "$(GREEN)Environment variables:$(NC)"
-	@echo "  $(YELLOW)ENV$(NC)     Environment (dev, staging, prod) [default: dev]"
-	@echo "  $(YELLOW)REGION$(NC)  AWS region [default: eu-west-2]"
-	@echo ""
-	@echo "$(GREEN)Examples:$(NC)"
-	@echo "  make plan ENV=staging"
-	@echo "  make apply ENV=prod"
-	@echo "  make test"
+	@echo "$(BLUE)Streaming Platform Infrastructure$(NC)"
+	@echo "$(YELLOW)Available commands:$(NC)"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 init: ## Initialize Terraform
-	@echo "$(BLUE)[INFO]$(NC) Initializing Terraform for $(ENV) environment..."
-	@cp environments/$(ENV)/terraform.tfvars terraform.tfvars
-	@terraform init
-	@terraform workspace select $(ENV) || terraform workspace new $(ENV)
-	@echo "$(GREEN)[SUCCESS]$(NC) Terraform initialized for $(ENV) environment"
+	@echo "$(BLUE)Initializing Terraform...$(NC)"
+	terraform init
 
-validate: ## Validate Terraform configuration
-	@echo "$(BLUE)[INFO]$(NC) Validating Terraform configuration..."
-	@terraform validate
-	@echo "$(GREEN)[SUCCESS]$(NC) Terraform configuration is valid"
-
-format: ## Format Terraform code
-	@echo "$(BLUE)[INFO]$(NC) Formatting Terraform code..."
-	@terraform fmt -recursive
-	@echo "$(GREEN)[SUCCESS]$(NC) Code formatted"
-
-plan: init validate ## Generate Terraform execution plan
-	@echo "$(BLUE)[INFO]$(NC) Generating Terraform plan for $(ENV) environment..."
-	@terraform plan -var-file=terraform.tfvars -out=$(ENV).tfplan
-	@echo "$(GREEN)[SUCCESS]$(NC) Plan generated: $(ENV).tfplan"
-
-apply: ## Apply Terraform plan
-	@echo "$(BLUE)[INFO]$(NC) Applying Terraform plan for $(ENV) environment..."
-	@if [ -f "$(ENV).tfplan" ]; then \
-		terraform apply $(ENV).tfplan; \
-	else \
-		echo "$(YELLOW)[WARNING]$(NC) No plan file found, generating new plan..."; \
-		terraform plan -var-file=terraform.tfvars -out=$(ENV).tfplan; \
-		terraform apply $(ENV).tfplan; \
+plan: ## Generate and show an execution plan
+	@echo "$(BLUE)Planning deployment for $(ENV) environment...$(NC)"
+	@if [ ! -f "environments/$(ENV)/terraform.tfvars" ]; then \
+		echo "$(RED)Error: environments/$(ENV)/terraform.tfvars not found$(NC)"; \
+		exit 1; \
 	fi
-	@echo "$(GREEN)[SUCCESS]$(NC) Infrastructure deployed for $(ENV) environment"
+	terraform plan -var-file="environments/$(ENV)/terraform.tfvars"
 
-destroy: init ## Destroy Terraform infrastructure
-	@echo "$(RED)[WARNING]$(NC) This will destroy all infrastructure for $(ENV) environment!"
-	@read -p "Are you sure? Type 'yes' to continue: " confirm; \
-	if [ "$$confirm" = "yes" ]; then \
-		terraform destroy -var-file=terraform.tfvars; \
-		echo "$(GREEN)[SUCCESS]$(NC) Infrastructure destroyed for $(ENV) environment"; \
+apply: ## Build or change infrastructure
+	@echo "$(BLUE)Applying changes for $(ENV) environment...$(NC)"
+	@if [ ! -f "environments/$(ENV)/terraform.tfvars" ]; then \
+		echo "$(RED)Error: environments/$(ENV)/terraform.tfvars not found$(NC)"; \
+		exit 1; \
+	fi
+	terraform apply -var-file="environments/$(ENV)/terraform.tfvars"
+
+destroy: ## Destroy Terraform-managed infrastructure
+	@echo "$(RED)Destroying infrastructure for $(ENV) environment...$(NC)"
+	@read -p "Are you sure you want to destroy the $(ENV) environment? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		terraform destroy -var-file="environments/$(ENV)/terraform.tfvars"; \
 	else \
-		echo "$(YELLOW)[INFO]$(NC) Destruction cancelled"; \
+		echo "$(YELLOW)Destroy cancelled$(NC)"; \
 	fi
 
-test: ## Run all tests
-	@echo "$(BLUE)[INFO]$(NC) Running pre-commit validation..."
-	@./scripts/pre-commit-hooks.sh
-	@echo "$(BLUE)[INFO]$(NC) Running integration tests..."
-	@TEST_ENVIRONMENT=$(ENV) ./tests/integration_test.sh
-	@echo "$(GREEN)[SUCCESS]$(NC) All tests passed"
+validate: ## Validate the Terraform files
+	@echo "$(BLUE)Validating Terraform configuration...$(NC)"
+	terraform validate
+	@echo "$(GREEN)✓ Configuration is valid$(NC)"
 
-test-modules: ## Test individual modules
-	@echo "$(BLUE)[INFO]$(NC) Testing Terraform modules..."
-	@for module in modules/*/; do \
-		echo "Testing module: $$module"; \
-		cd "$$module" && terraform init -backend=false && terraform validate && cd ../..; \
-	done
-	@echo "$(GREEN)[SUCCESS]$(NC) All modules validated"
-
-security: ## Run security scanning
-	@echo "$(BLUE)[INFO]$(NC) Running security scans..."
-	@if command -v tfsec >/dev/null 2>&1; then \
-		tfsec . --format table; \
-	else \
-		echo "$(YELLOW)[WARNING]$(NC) tfsec not installed, skipping security scan"; \
-	fi
-	@echo "$(GREEN)[SUCCESS]$(NC) Security scan completed"
-
-lint: ## Run linting checks
-	@echo "$(BLUE)[INFO]$(NC) Running linting checks..."
-	@terraform fmt -check -recursive
-	@if command -v tflint >/dev/null 2>&1; then \
-		tflint --init && tflint; \
-	else \
-		echo "$(YELLOW)[WARNING]$(NC) tflint not installed, skipping lint checks"; \
-	fi
-	@echo "$(GREEN)[SUCCESS]$(NC) Linting completed"
+format: ## Format Terraform files
+	@echo "$(BLUE)Formatting Terraform files...$(NC)"
+	terraform fmt -recursive
+	@echo "$(GREEN)✓ Files formatted$(NC)"
 
 clean: ## Clean up temporary files
-	@echo "$(BLUE)[INFO]$(NC) Cleaning up temporary files..."
-	@rm -f *.tfplan
-	@rm -f terraform.tfvars
-	@rm -f .terraform.lock.hcl
-	@rm -rf .terraform/
-	@echo "$(GREEN)[SUCCESS]$(NC) Cleanup completed"
+	@echo "$(BLUE)Cleaning up temporary files...$(NC)"
+	rm -rf .terraform/
+	rm -f terraform.tfstate.backup
+	rm -f .terraform.lock.hcl
+	@echo "$(GREEN)✓ Cleanup complete$(NC)"
 
-outputs: ## Show Terraform outputs
-	@echo "$(BLUE)[INFO]$(NC) Terraform outputs for $(ENV) environment:"
-	@terraform output
-
-state-list: ## List Terraform state resources
-	@echo "$(BLUE)[INFO]$(NC) Terraform state resources for $(ENV) environment:"
-	@terraform state list
-
-workspace-list: ## List Terraform workspaces
-	@echo "$(BLUE)[INFO]$(NC) Available Terraform workspaces:"
-	@terraform workspace list
-
-cost-estimate: ## Estimate infrastructure costs (requires infracost)
-	@echo "$(BLUE)[INFO]$(NC) Estimating infrastructure costs..."
-	@if command -v infracost >/dev/null 2>&1; then \
-		infracost breakdown --path . --format table; \
-	else \
-		echo "$(YELLOW)[WARNING]$(NC) infracost not installed, skipping cost estimation"; \
-		echo "Install from: https://www.infracost.io/docs/"; \
+test: ## Run validation and tests
+	@echo "$(BLUE)Running tests...$(NC)"
+	@if [ -f "scripts/validate-terraform.sh" ]; then \
+		chmod +x scripts/validate-terraform.sh; \
+		./scripts/validate-terraform.sh; \
 	fi
-
-docs: ## Generate documentation
-	@echo "$(BLUE)[INFO]$(NC) Generating Terraform documentation..."
-	@if command -v terraform-docs >/dev/null 2>&1; then \
-		terraform-docs markdown table --output-file README.md .; \
-		for module in modules/*/; do \
-			terraform-docs markdown table --output-file README.md "$$module"; \
-		done; \
-	else \
-		echo "$(YELLOW)[WARNING]$(NC) terraform-docs not installed, skipping documentation generation"; \
-		echo "Install from: https://terraform-docs.io/user-guide/installation/"; \
+	@if [ -f "tests/integration_test.sh" ]; then \
+		chmod +x tests/integration_test.sh; \
+		./tests/integration_test.sh; \
 	fi
-	@echo "$(GREEN)[SUCCESS]$(NC) Documentation generated"
+	@echo "$(GREEN)✓ Tests completed$(NC)"
 
-backup: ## Create infrastructure backup
-	@echo "$(BLUE)[INFO]$(NC) Creating infrastructure backup..."
-	@./scripts/rollback.sh --create-backup --environment $(ENV)
-	@echo "$(GREEN)[SUCCESS]$(NC) Backup created for $(ENV) environment"
+frontend-install: ## Install frontend dependencies
+	@echo "$(BLUE)Installing frontend dependencies...$(NC)"
+	@cd streaming-platform-frontend && \
+	chmod +x install-dependencies.sh && \
+	./install-dependencies.sh
+	@echo "$(GREEN)✓ Frontend dependencies installed$(NC)"
 
-rollback: ## Rollback to previous state
-	@echo "$(BLUE)[INFO]$(NC) Available backups for $(ENV) environment:"
-	@./scripts/rollback.sh --list --environment $(ENV)
-	@read -p "Enter backup ID to rollback to: " backup_id; \
-	./scripts/rollback.sh --environment $(ENV) --backup-id "$$backup_id"
+frontend-dev: ## Start frontend development servers
+	@echo "$(BLUE)Starting frontend development servers...$(NC)"
+	@cd streaming-platform-frontend && npm run dev
 
-setup-hooks: ## Setup git pre-commit hooks
-	@echo "$(BLUE)[INFO]$(NC) Setting up git pre-commit hooks..."
-	@chmod +x scripts/pre-commit-hooks.sh
-	@ln -sf ../../scripts/pre-commit-hooks.sh .git/hooks/pre-commit
-	@echo "$(GREEN)[SUCCESS]$(NC) Pre-commit hooks configured"
+frontend-build: ## Build frontend applications
+	@echo "$(BLUE)Building frontend applications...$(NC)"
+	@cd streaming-platform-frontend && npm run build
 
-check-tools: ## Check required tools installation
-	@echo "$(BLUE)[INFO]$(NC) Checking required tools..."
-	@echo -n "Terraform: "; \
-	if command -v terraform >/dev/null 2>&1; then \
-		echo "$(GREEN)✓ $(shell terraform version | head -n1)$(NC)"; \
-	else \
-		echo "$(RED)✗ Not installed$(NC)"; \
-	fi
-	@echo -n "AWS CLI: "; \
-	if command -v aws >/dev/null 2>&1; then \
-		echo "$(GREEN)✓ $(shell aws --version)$(NC)"; \
-	else \
-		echo "$(RED)✗ Not installed$(NC)"; \
-	fi
-	@echo -n "Git: "; \
-	if command -v git >/dev/null 2>&1; then \
-		echo "$(GREEN)✓ $(shell git --version)$(NC)"; \
-	else \
-		echo "$(RED)✗ Not installed$(NC)"; \
-	fi
-	@echo -n "tfsec: "; \
-	if command -v tfsec >/dev/null 2>&1; then \
-		echo "$(GREEN)✓ $(shell tfsec --version)$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠ Not installed (optional)$(NC)"; \
-	fi
-	@echo -n "tflint: "; \
-	if command -v tflint >/dev/null 2>&1; then \
-		echo "$(GREEN)✓ $(shell tflint --version)$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠ Not installed (optional)$(NC)"; \
-	fi
-
-install-tools: ## Install optional tools (Linux/macOS)
-	@echo "$(BLUE)[INFO]$(NC) Installing optional tools..."
-	@echo "Installing tfsec..."
-	@curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-	@echo "Installing tflint..."
-	@curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-	@echo "$(GREEN)[SUCCESS]$(NC) Optional tools installed"
-
-ci-validate: format validate lint security test-modules ## Run CI validation pipeline
-	@echo "$(GREEN)[SUCCESS]$(NC) CI validation pipeline completed"
-
-ci-plan: init plan ## Run CI plan pipeline
-	@echo "$(GREEN)[SUCCESS]$(NC) CI plan pipeline completed"
-
-ci-deploy: apply ## Run CI deployment pipeline
-	@echo "$(GREEN)[SUCCESS]$(NC) CI deployment pipeline completed"
+frontend-test: ## Run frontend tests
+	@echo "$(BLUE)Running frontend tests...$(NC)"
+	@cd streaming-platform-frontend && npm run test
 
 # Environment-specific shortcuts
-dev: ## Quick deployment to dev environment
-	@$(MAKE) apply ENV=dev
+dev: ENV=dev
+dev: plan ## Plan for development environment
 
-staging: ## Quick deployment to staging environment
-	@$(MAKE) apply ENV=staging
+staging: ENV=staging  
+staging: plan ## Plan for staging environment
 
-prod: ## Quick deployment to prod environment (with confirmation)
-	@echo "$(RED)[WARNING]$(NC) Deploying to PRODUCTION environment!"
-	@read -p "Are you sure? Type 'DEPLOY' to continue: " confirm; \
-	if [ "$$confirm" = "DEPLOY" ]; then \
-		$(MAKE) apply ENV=prod; \
+prod: ENV=prod
+prod: plan ## Plan for production environment
+
+# Quick deployment shortcuts
+deploy-dev: ENV=dev
+deploy-dev: apply ## Deploy to development environment
+
+deploy-staging: ENV=staging
+deploy-staging: apply ## Deploy to staging environment
+
+deploy-prod: ENV=prod
+deploy-prod: apply ## Deploy to production environment
+
+# Complete setup
+setup: init validate format ## Complete setup (init, validate, format)
+	@echo "$(GREEN)✓ Setup complete! Run 'make plan ENV=dev' to see deployment plan$(NC)"
+
+# Docker and ECS commands
+docker-build: ## Build Docker images for all applications
+	@echo "$(BLUE)Building Docker images...$(NC)"
+	@chmod +x scripts/build-and-push.sh
+	@./scripts/build-and-push.sh $(ENV) all latest
+
+docker-build-app: ## Build Docker image for specific app (usage: make docker-build-app APP=viewer-portal)
+	@echo "$(BLUE)Building Docker image for $(APP)...$(NC)"
+	@chmod +x scripts/build-and-push.sh
+	@./scripts/build-and-push.sh $(ENV) $(APP) latest
+
+docker-push: ## Build and push Docker images to ECR
+	@echo "$(BLUE)Building and pushing Docker images to ECR...$(NC)"
+	@chmod +x scripts/build-and-push.sh
+	@./scripts/build-and-push.sh $(ENV) all latest
+
+docker-push-app: ## Build and push specific app to ECR (usage: make docker-push-app APP=viewer-portal)
+	@echo "$(BLUE)Building and pushing $(APP) to ECR...$(NC)"
+	@chmod +x scripts/build-and-push.sh
+	@./scripts/build-and-push.sh $(ENV) $(APP) latest
+
+# ECS deployment
+deploy-ecs: ## Deploy ECS infrastructure and applications
+	@echo "$(BLUE)Deploying ECS infrastructure...$(NC)"
+	@terraform apply -var-file="environments/$(ENV)/terraform.tfvars" -var="enable_ecs=true" -auto-approve
+	@echo "$(GREEN)✓ ECS deployment complete$(NC)"
+
+ecs-status: ## Show ECS cluster status
+	@echo "$(BLUE)ECS Cluster Status:$(NC)"
+	@aws ecs describe-clusters --clusters streaming-logs-$(ENV) --region eu-west-2 2>/dev/null || echo "$(YELLOW)ECS cluster not found$(NC)"
+
+ecs-services: ## List ECS services
+	@echo "$(BLUE)ECS Services:$(NC)"
+	@aws ecs list-services --cluster streaming-logs-$(ENV) --region eu-west-2 2>/dev/null || echo "$(YELLOW)ECS cluster not found$(NC)"
+
+# Streaming control
+streaming-start: ## Start MediaLive channel for streaming
+	@echo "$(BLUE)Starting MediaLive channel...$(NC)"
+	@chmod +x scripts/streaming-control.sh
+	@./scripts/streaming-control.sh start $(ENV)
+	@echo "$(YELLOW)Channel started - costs ~$10/day while running$(NC)"
+
+streaming-stop: ## Stop MediaLive channel to save costs
+	@echo "$(BLUE)Stopping MediaLive channel...$(NC)"
+	@chmod +x scripts/streaming-control.sh
+	@./scripts/streaming-control.sh stop $(ENV)
+	@echo "$(GREEN)Channel stopped - no streaming costs$(NC)"
+
+streaming-status: ## Check MediaLive channel status
+	@echo "$(BLUE)MediaLive Channel Status:$(NC)"
+	@aws medialive list-channels --region eu-west-2 --query "Channels[?Name=='streaming-logs-$(ENV)-channel'].[Name,State]" --output table 2>/dev/null || echo "$(YELLOW)No channels found$(NC)"
+
+# Complete deployment workflow
+deploy-full: ## Complete deployment (infrastructure + containers)
+	@echo "$(BLUE)Starting full deployment...$(NC)"
+	@make apply ENV=$(ENV)
+	@make docker-push ENV=$(ENV)
+	@make deploy-ecs ENV=$(ENV)
+	@echo "$(GREEN)✓ Full deployment complete$(NC)"
+
+# Show current status
+status: ## Show Terraform status
+	@echo "$(BLUE)Terraform Status:$(NC)"
+	@terraform version
+	@echo ""
+	@if [ -f ".terraform/terraform.tfstate" ]; then \
+		echo "$(GREEN)✓ Terraform initialized$(NC)"; \
 	else \
-		echo "$(YELLOW)[INFO]$(NC) Production deployment cancelled"; \
+		echo "$(YELLOW)⚠ Terraform not initialized - run 'make init'$(NC)"; \
 	fi
-
-# Default target
-.DEFAULT_GOAL := help
+	@echo ""
+	@echo "$(BLUE)Available environments:$(NC)"
+	@ls -1 environments/ 2>/dev/null || echo "$(RED)No environment configurations found$(NC)"
+	@echo ""
+	@echo "$(BLUE)Docker Status:$(NC)"
+	@docker --version 2>/dev/null || echo "$(RED)Docker not installed$(NC)"
+	@echo ""
+	@echo "$(BLUE)AWS CLI Status:$(NC)"
+	@aws --version 2>/dev/null || echo "$(RED)AWS CLI not installed$(NC)"

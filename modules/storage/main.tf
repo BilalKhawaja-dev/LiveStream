@@ -27,10 +27,10 @@ resource "aws_s3_bucket" "streaming_logs" {
   bucket = "${var.project_name}-logs-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   tags = merge(var.tags, {
-    Name        = "${var.project_name}-logs-${var.environment}"
-    Purpose     = "Streaming application logs storage"
-    DataType    = "Logs"
-    Retention   = "1-year"
+    Name      = "${var.project_name}-logs-${var.environment}"
+    Purpose   = "Streaming application logs storage"
+    DataType  = "Logs"
+    Retention = "1-year"
   })
 }
 
@@ -39,10 +39,10 @@ resource "aws_s3_bucket" "error_logs" {
   bucket = "${var.project_name}-errors-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   tags = merge(var.tags, {
-    Name        = "${var.project_name}-errors-${var.environment}"
-    Purpose     = "Failed log processing and error storage"
-    DataType    = "ErrorLogs"
-    Retention   = "1-year"
+    Name      = "${var.project_name}-errors-${var.environment}"
+    Purpose   = "Failed log processing and error storage"
+    DataType  = "ErrorLogs"
+    Retention = "1-year"
   })
 }
 
@@ -51,10 +51,10 @@ resource "aws_s3_bucket" "backups" {
   bucket = "${var.project_name}-backups-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   tags = merge(var.tags, {
-    Name        = "${var.project_name}-backups-${var.environment}"
-    Purpose     = "Database and application backups"
-    DataType    = "Backups"
-    Retention   = "1-year"
+    Name      = "${var.project_name}-backups-${var.environment}"
+    Purpose   = "Database and application backups"
+    DataType  = "Backups"
+    Retention = "1-year"
   })
 }
 
@@ -63,10 +63,10 @@ resource "aws_s3_bucket" "athena_results" {
   bucket = "${var.project_name}-query-results-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   tags = merge(var.tags, {
-    Name        = "${var.project_name}-query-results-${var.environment}"
-    Purpose     = "Athena query results and temporary data"
-    DataType    = "QueryResults"
-    Retention   = "30-days"
+    Name      = "${var.project_name}-query-results-${var.environment}"
+    Purpose   = "Athena query results and temporary data"
+    DataType  = "QueryResults"
+    Retention = "30-days"
   })
 }
 

@@ -40,13 +40,13 @@ output "dashboard_arns" {
 output "monitoring_configuration" {
   description = "Summary of monitoring configuration"
   value = {
-    total_dashboards = var.enable_security_dashboard ? 5 : 4
-    security_dashboard_enabled = var.enable_security_dashboard
-    cost_dashboard_enabled = var.enable_cost_dashboard
+    total_dashboards              = var.enable_security_dashboard ? 5 : 4
+    security_dashboard_enabled    = var.enable_security_dashboard
+    cost_dashboard_enabled        = var.enable_cost_dashboard
     performance_dashboard_enabled = var.enable_performance_dashboard
-    refresh_interval = var.dashboard_refresh_interval
-    environment = var.environment
-    project_name = var.project_name
+    refresh_interval              = var.dashboard_refresh_interval
+    environment                   = var.environment
+    project_name                  = var.project_name
   }
 }
 
@@ -68,9 +68,9 @@ output "budget_names" {
 output "cost_alarm_names" {
   description = "Map of cost alarm names"
   value = {
-    estimated_charges = aws_cloudwatch_metric_alarm.estimated_charges.alarm_name
-    s3_costs         = var.enable_service_cost_alarms ? aws_cloudwatch_metric_alarm.s3_costs[0].alarm_name : null
-    athena_costs     = var.enable_service_cost_alarms ? aws_cloudwatch_metric_alarm.athena_costs[0].alarm_name : null
+    estimated_charges   = aws_cloudwatch_metric_alarm.estimated_charges.alarm_name
+    s3_costs            = var.enable_service_cost_alarms ? aws_cloudwatch_metric_alarm.s3_costs[0].alarm_name : null
+    athena_costs        = var.enable_service_cost_alarms ? aws_cloudwatch_metric_alarm.athena_costs[0].alarm_name : null
     data_transfer_costs = var.enable_service_cost_alarms ? aws_cloudwatch_metric_alarm.data_transfer_costs[0].alarm_name : null
   }
 }
@@ -90,12 +90,12 @@ output "cost_optimization_function_arn" {
 output "cost_monitoring_configuration" {
   description = "Summary of cost monitoring configuration"
   value = {
-    monthly_budget_limit = var.monthly_budget_limit
-    service_budgets_enabled = var.enable_service_budgets
-    cost_alarms_enabled = var.enable_service_cost_alarms
+    monthly_budget_limit      = var.monthly_budget_limit
+    service_budgets_enabled   = var.enable_service_budgets
+    cost_alarms_enabled       = var.enable_service_cost_alarms
     anomaly_detection_enabled = var.enable_anomaly_detection
     cost_optimization_enabled = var.enable_cost_optimization_lambda
-    billing_alarm_threshold = var.billing_alarm_threshold
+    billing_alarm_threshold   = var.billing_alarm_threshold
   }
 }
 
@@ -120,11 +120,11 @@ output "cleanup_schedules" {
 output "cleanup_configuration" {
   description = "Summary of cleanup configuration"
   value = {
-    automated_cleanup_enabled = var.enable_automated_cleanup
+    automated_cleanup_enabled     = var.enable_automated_cleanup
     athena_results_retention_days = var.athena_results_retention_days
-    query_results_retention_days = var.query_results_retention_days
-    log_cleanup_retention_days = var.log_cleanup_retention_days
-    s3_cleanup_schedule = var.s3_cleanup_schedule
-    logs_cleanup_schedule = var.logs_cleanup_schedule
+    query_results_retention_days  = var.query_results_retention_days
+    log_cleanup_retention_days    = var.log_cleanup_retention_days
+    s3_cleanup_schedule           = var.s3_cleanup_schedule
+    logs_cleanup_schedule         = var.logs_cleanup_schedule
   }
 }

@@ -109,7 +109,7 @@ variable "require_mfa" {
 variable "max_session_duration" {
   description = "Maximum session duration for role assumption (seconds)"
   type        = number
-  default     = 3600  # 1 hour
+  default     = 3600 # 1 hour
 }
 
 variable "force_detach_policies" {

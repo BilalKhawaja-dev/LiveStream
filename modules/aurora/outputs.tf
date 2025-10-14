@@ -106,11 +106,11 @@ output "serverless_max_capacity" {
 output "connection_info" {
   description = "Aurora connection information"
   value = {
-    endpoint     = aws_rds_cluster.aurora.endpoint
-    port         = aws_rds_cluster.aurora.port
-    database     = aws_rds_cluster.aurora.database_name
-    username     = aws_rds_cluster.aurora.master_username
-    secret_arn   = aws_secretsmanager_secret.aurora_master.arn
+    endpoint   = aws_rds_cluster.aurora.endpoint
+    port       = aws_rds_cluster.aurora.port
+    database   = aws_rds_cluster.aurora.database_name
+    username   = aws_rds_cluster.aurora.master_username
+    secret_arn = aws_secretsmanager_secret.aurora_master.arn
   }
   sensitive = true
 }

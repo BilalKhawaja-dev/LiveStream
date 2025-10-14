@@ -376,8 +376,8 @@ resource "aws_iam_role_policy" "firehose_integration_policy" {
 
 # SNS Topic for Log Alerts
 resource "aws_sns_topic" "log_alerts" {
-  name         = "${var.project_name}-log-alerts-${var.environment}"
-  display_name = "Log Monitoring Alerts"
+  name              = "${var.project_name}-log-alerts-${var.environment}"
+  display_name      = "Log Monitoring Alerts"
   kms_master_key_id = var.kms_key_arn
 
   tags = merge(var.tags, {

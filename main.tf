@@ -11,11 +11,12 @@ terraform {
     }
   }
 
+  # Backend configuration - uncomment and configure when ready to use remote state
   # backend "s3" {
-  #   bucket         = "terraform-state-centralized-logging-dr"
-  #   key            = "dev/terraform.tfstate"
+  #   bucket         = "your-terraform-state-bucket"
+  #   key            = "streaming-logs/terraform.tfstate"
   #   region         = "eu-west-2"
-  #   dynamodb_table = "terraform-state-lock-centralized-logging-dr"
+  #   dynamodb_table = "terraform-state-lock"
   #   encrypt        = true
   # }
 }
@@ -56,10 +57,10 @@ locals {
 module "vpc" {
   source = "./modules/vpc"
 
-  project_name       = var.project_name
-  environment        = var.environment
-  vpc_cidr          = var.vpc_cidr
-  availability_zones = var.availability_zones
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_cidr             = var.vpc_cidr
+  availability_zones   = var.availability_zones
   enable_vpc_endpoints = true
 
   tags = local.common_tags
@@ -85,8 +86,8 @@ module "storage" {
 module "cloudwatch_logs" {
   source = "./modules/cloudwatch_logs"
 
-  project_name                  = var.project_name
-  environment                   = var.environment
+  project_name                 = var.project_name
+  environment                  = var.environment
   log_retention_days           = var.log_retention_days
   kms_key_arn                  = module.storage.kms_key_arn
   enable_subscription_filters  = true
@@ -101,8 +102,8 @@ module "cloudwatch_logs" {
 module "kinesis_firehose" {
   source = "./modules/kinesis_firehose"
 
-  project_name         = var.project_name
-  environment          = var.environment
+  project_name        = var.project_name
+  environment         = var.environment
   s3_bucket_arn       = module.storage.streaming_logs_bucket_arn
   s3_error_bucket_arn = module.storage.error_logs_bucket_arn
   kms_key_arn         = module.storage.kms_key_arn
@@ -136,19 +137,19 @@ module "glue_catalog" {
 module "athena" {
   source = "./modules/athena"
 
-  project_name                = var.project_name
-  environment                 = var.environment
-  athena_results_bucket_name  = module.storage.athena_results_bucket_id
-  athena_results_bucket_arn   = module.storage.athena_results_bucket_arn
-  s3_logs_bucket_arn          = module.storage.streaming_logs_bucket_arn
-  glue_database_name          = module.glue_catalog.glue_database_name
-  kms_key_arn                 = module.storage.kms_key_arn
-  log_retention_days          = var.log_retention_days
-  athena_results_retention_days = var.athena_results_retention_days
-  enable_query_logging        = var.enable_athena_query_logging
-  enable_cost_monitoring      = var.enable_athena_cost_monitoring
-  enable_performance_monitoring = var.enable_athena_performance_monitoring
-  data_scanned_alarm_threshold = var.athena_bytes_scanned_cutoff_gb * 1073741824 # Convert GB to bytes
+  project_name                   = var.project_name
+  environment                    = var.environment
+  athena_results_bucket_name     = module.storage.athena_results_bucket_id
+  athena_results_bucket_arn      = module.storage.athena_results_bucket_arn
+  s3_logs_bucket_arn             = module.storage.streaming_logs_bucket_arn
+  glue_database_name             = module.glue_catalog.glue_database_name
+  kms_key_arn                    = module.storage.kms_key_arn
+  log_retention_days             = var.log_retention_days
+  athena_results_retention_days  = var.athena_results_retention_days
+  enable_query_logging           = var.enable_athena_query_logging
+  enable_cost_monitoring         = var.enable_athena_cost_monitoring
+  enable_performance_monitoring  = var.enable_athena_performance_monitoring
+  data_scanned_alarm_threshold   = var.athena_bytes_scanned_cutoff_gb * 1073741824           # Convert GB to bytes
   query_execution_time_threshold = var.athena_query_execution_time_threshold_minutes * 60000 # Convert minutes to milliseconds
 
   tags = local.common_tags
@@ -168,10 +169,10 @@ module "aurora" {
   environment  = var.environment
 
   # VPC Configuration
-  vpc_id                    = module.vpc.vpc_id
-  database_subnet_ids       = module.vpc.database_subnet_ids
-  aurora_security_group_id  = module.vpc.aurora_security_group_id
-  aurora_subnet_group_name  = module.vpc.aurora_subnet_group_name
+  vpc_id                   = module.vpc.vpc_id
+  database_subnet_ids      = module.vpc.database_subnet_ids
+  aurora_security_group_id = module.vpc.aurora_security_group_id
+  aurora_subnet_group_name = module.vpc.aurora_subnet_group_name
 
   # Serverless v2 scaling configuration
   min_capacity   = var.aurora_min_capacity
@@ -182,33 +183,33 @@ module "aurora" {
   engine_version  = var.aurora_engine_version
   database_name   = var.aurora_database_name
   master_username = var.aurora_master_username
-  port           = var.aurora_port
+  port            = var.aurora_port
 
   # Backup and maintenance
   backup_retention_period = var.aurora_backup_retention_period
-  backup_window          = var.aurora_backup_window
-  maintenance_window     = var.aurora_maintenance_window
-  deletion_protection    = var.aurora_deletion_protection
+  backup_window           = var.aurora_backup_window
+  maintenance_window      = var.aurora_maintenance_window
+  deletion_protection     = var.aurora_deletion_protection
 
   # Monitoring and logging
-  enabled_cloudwatch_logs_exports        = var.aurora_enabled_cloudwatch_logs_exports
-  monitoring_interval                    = var.aurora_monitoring_interval
-  performance_insights_enabled           = var.aurora_performance_insights_enabled
-  performance_insights_retention_period  = var.aurora_performance_insights_retention_period
-  log_retention_days                     = var.log_retention_days
+  enabled_cloudwatch_logs_exports       = var.aurora_enabled_cloudwatch_logs_exports
+  monitoring_interval                   = var.aurora_monitoring_interval
+  performance_insights_enabled          = var.aurora_performance_insights_enabled
+  performance_insights_retention_period = var.aurora_performance_insights_retention_period
+  log_retention_days                    = var.log_retention_days
 
   # Security
   availability_zones         = var.availability_zones
   auto_minor_version_upgrade = var.aurora_auto_minor_version_upgrade
-  kms_deletion_window       = var.kms_key_deletion_window
+  kms_deletion_window        = var.kms_key_deletion_window
 
   # CloudWatch alarms
-  enable_cloudwatch_alarms           = var.aurora_enable_cloudwatch_alarms
-  alarm_cpu_threshold               = var.aurora_alarm_cpu_threshold
-  alarm_connection_threshold        = var.aurora_alarm_connection_threshold
-  alarm_freeable_memory_threshold   = var.aurora_alarm_freeable_memory_threshold
-  backup_alarm_enabled              = var.aurora_backup_alarm_enabled
-  backup_window_hours               = var.aurora_backup_window_hours
+  enable_cloudwatch_alarms        = var.aurora_enable_cloudwatch_alarms
+  alarm_cpu_threshold             = var.aurora_alarm_cpu_threshold
+  alarm_connection_threshold      = var.aurora_alarm_connection_threshold
+  alarm_freeable_memory_threshold = var.aurora_alarm_freeable_memory_threshold
+  backup_alarm_enabled            = var.aurora_backup_alarm_enabled
+  backup_window_hours             = var.aurora_backup_window_hours
 
   depends_on = [module.vpc]
 }
@@ -221,17 +222,17 @@ module "dynamodb" {
   environment  = var.environment
 
   # Billing configuration
-  billing_mode    = var.dynamodb_billing_mode
-  read_capacity   = var.dynamodb_read_capacity
-  write_capacity  = var.dynamodb_write_capacity
+  billing_mode   = var.dynamodb_billing_mode
+  read_capacity  = var.dynamodb_read_capacity
+  write_capacity = var.dynamodb_write_capacity
 
   # Backup and recovery
   enable_point_in_time_recovery = var.dynamodb_enable_point_in_time_recovery
   backup_retention_days         = var.dynamodb_backup_retention_days
 
   # Streaming configuration
-  enable_streams     = var.dynamodb_enable_streams
-  stream_view_type   = var.dynamodb_stream_view_type
+  enable_streams   = var.dynamodb_enable_streams
+  stream_view_type = var.dynamodb_stream_view_type
 
   # TTL configuration
   enable_ttl = var.dynamodb_enable_ttl
@@ -240,26 +241,26 @@ module "dynamodb" {
   kms_deletion_window = var.kms_key_deletion_window
 
   # Monitoring
-  enable_cloudwatch_alarms              = var.dynamodb_enable_cloudwatch_alarms
-  read_throttle_threshold              = var.dynamodb_read_throttle_threshold
-  write_throttle_threshold             = var.dynamodb_write_throttle_threshold
-  consumed_read_capacity_threshold     = var.dynamodb_consumed_read_capacity_threshold
-  consumed_write_capacity_threshold    = var.dynamodb_consumed_write_capacity_threshold
+  enable_cloudwatch_alarms          = var.dynamodb_enable_cloudwatch_alarms
+  read_throttle_threshold           = var.dynamodb_read_throttle_threshold
+  write_throttle_threshold          = var.dynamodb_write_throttle_threshold
+  consumed_read_capacity_threshold  = var.dynamodb_consumed_read_capacity_threshold
+  consumed_write_capacity_threshold = var.dynamodb_consumed_write_capacity_threshold
 
   # Auto-scaling (for provisioned mode)
-  enable_autoscaling                   = var.dynamodb_enable_autoscaling
-  autoscaling_read_target             = var.dynamodb_autoscaling_read_target
-  autoscaling_write_target            = var.dynamodb_autoscaling_write_target
-  autoscaling_min_read_capacity       = var.dynamodb_autoscaling_min_read_capacity
-  autoscaling_max_read_capacity       = var.dynamodb_autoscaling_max_read_capacity
-  autoscaling_min_write_capacity      = var.dynamodb_autoscaling_min_write_capacity
-  autoscaling_max_write_capacity      = var.dynamodb_autoscaling_max_write_capacity
+  enable_autoscaling             = var.dynamodb_enable_autoscaling
+  autoscaling_read_target        = var.dynamodb_autoscaling_read_target
+  autoscaling_write_target       = var.dynamodb_autoscaling_write_target
+  autoscaling_min_read_capacity  = var.dynamodb_autoscaling_min_read_capacity
+  autoscaling_max_read_capacity  = var.dynamodb_autoscaling_max_read_capacity
+  autoscaling_min_write_capacity = var.dynamodb_autoscaling_min_write_capacity
+  autoscaling_max_write_capacity = var.dynamodb_autoscaling_max_write_capacity
 
   # Backup monitoring
-  backup_storage_threshold_bytes       = var.dynamodb_backup_storage_threshold_bytes
-  enable_backup_validation            = var.dynamodb_enable_backup_validation
-  backup_validation_schedule          = var.dynamodb_backup_validation_schedule
-  log_retention_days                  = var.log_retention_days
+  backup_storage_threshold_bytes = var.dynamodb_backup_storage_threshold_bytes
+  enable_backup_validation       = var.dynamodb_enable_backup_validation
+  backup_validation_schedule     = var.dynamodb_backup_validation_schedule
+  log_retention_days             = var.log_retention_days
 }
 
 # IAM Module - Service-specific roles and user policies
@@ -270,42 +271,42 @@ module "iam" {
   environment  = var.environment
 
   # Resource ARNs for cross-service permissions
-  s3_bucket_arns        = [
+  s3_bucket_arns = [
     module.storage.streaming_logs_bucket_arn,
     module.storage.error_logs_bucket_arn,
     module.storage.backups_bucket_arn,
     module.storage.athena_results_bucket_arn
   ]
-  s3_bucket_names       = [
+  s3_bucket_names = [
     module.storage.streaming_logs_bucket_id,
     module.storage.error_logs_bucket_id,
     module.storage.backups_bucket_id,
     module.storage.athena_results_bucket_id
   ]
-  kms_key_arns          = concat([
+  kms_key_arns = concat([
     module.storage.kms_key_arn,
     module.dynamodb.kms_key_arn
   ], var.enable_aurora ? [module.aurora[0].kms_key_arn] : [])
-  kms_key_ids           = concat([
+  kms_key_ids = concat([
     module.storage.kms_key_id,
     module.dynamodb.kms_key_id
   ], var.enable_aurora ? [module.aurora[0].kms_key_id] : [])
   kinesis_firehose_arns = values(module.kinesis_firehose.delivery_stream_arns)
   dynamodb_table_arns   = values(module.dynamodb.table_arns)
   aurora_cluster_arns   = var.enable_aurora ? [module.aurora[0].cluster_arn] : []
-  glue_catalog_arns     = [
+  glue_catalog_arns = [
     module.glue_catalog.glue_database_arn,
     "${module.glue_catalog.glue_database_arn}/*"
   ]
 
   # User and application policy settings
-  create_user_groups           = var.iam_create_user_groups
-  enable_developer_access      = var.iam_enable_developer_access
-  enable_cross_service_access  = var.iam_enable_cross_service_access
+  create_user_groups          = var.iam_create_user_groups
+  enable_developer_access     = var.iam_enable_developer_access
+  enable_cross_service_access = var.iam_enable_cross_service_access
 
   # Security settings
-  require_mfa              = var.iam_require_mfa
-  max_session_duration     = var.iam_max_session_duration
+  require_mfa                 = var.iam_require_mfa
+  max_session_duration        = var.iam_max_session_duration
   enable_cross_account_access = var.iam_enable_cross_account_access
 
   additional_tags = local.common_tags
@@ -317,6 +318,163 @@ module "iam" {
     module.kinesis_firehose,
     module.glue_catalog
   ]
+}
+
+# ALB Module - Application Load Balancer for frontend applications
+module "alb" {
+  count  = var.enable_ecs ? 1 : 0
+  source = "./modules/alb"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  vpc_id             = module.vpc.vpc_id
+  vpc_cidr           = var.vpc_cidr
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  certificate_arn    = var.ssl_certificate_arn
+  access_logs_bucket = module.storage.streaming_logs_bucket_id
+
+  # Frontend applications configuration
+  frontend_applications = {
+    viewer-portal = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 100
+    }
+    creator-dashboard = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 200
+    }
+    admin-portal = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 300
+    }
+    support-system = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 400
+    }
+    analytics-dashboard = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 500
+    }
+    developer-console = {
+      port               = 80
+      health_check_path  = "/health"
+      priority          = 600
+    }
+  }
+
+  # Customer service routing - any service can redirect here
+  customer_service_routing = {
+    enabled = true
+    path_patterns = ["/support", "/help", "/contact"]
+    target_service = "support-system"
+    priority = 50  # Higher priority than app-specific routes
+  }
+
+  # ALB configuration
+  enable_deletion_protection = var.environment == "prod"
+  enable_access_logs        = true
+  enable_cloudwatch_alarms  = true
+  log_retention_days        = var.log_retention_days
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc, module.storage]
+}
+
+# ECS Module - Container orchestration for frontend applications
+module "ecs" {
+  count  = var.enable_ecs ? 1 : 0
+  source = "./modules/ecs"
+
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+
+  # ECS configuration
+  applications              = var.ecs_applications
+  task_cpu                 = var.ecs_task_cpu
+  task_memory              = var.ecs_task_memory
+  desired_count            = var.ecs_desired_count
+  use_spot_instances       = var.ecs_use_spot_instances
+  enable_container_insights = var.ecs_enable_container_insights
+
+  # Network configuration
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  ecs_security_group_id = module.vpc.ecs_security_group_id
+
+  # ALB integration
+  target_group_arns = var.enable_ecs ? module.alb[0].target_group_arns : {}
+  alb_listener_arn  = var.enable_ecs ? module.alb[0].https_listener_arn : ""
+
+  # IAM roles
+  execution_role_arn = module.iam.ecs_execution_role_arn
+  task_role_arn     = module.iam.ecs_task_role_arn
+
+  # Logging
+  log_retention_days = var.log_retention_days
+
+  tags = local.common_tags
+
+  depends_on = [
+    module.vpc,
+    module.alb,
+    module.iam
+  ]
+}
+
+# Authentication Module - Cognito user management
+module "auth" {
+  source = "./modules/auth"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  tags = local.common_tags
+}
+
+# REST API Gateway Module - Backend API endpoints
+module "api_gateway_rest" {
+  source = "./modules/api_gateway_rest"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  tags = local.common_tags
+}
+
+# Chat Module - WebSocket real-time chat
+module "chat" {
+  source = "./modules/chat"
+
+  project_name           = var.project_name
+  environment           = var.environment
+  lambda_role_arn       = module.iam.lambda_execution_role_arn
+  connections_table_name = module.dynamodb.connections_table_name
+  messages_table_name   = module.dynamodb.messages_table_name
+
+  tags = local.common_tags
+
+  depends_on = [module.iam, module.dynamodb]
+}
+
+# Media Services Module - Streaming infrastructure
+module "media_services" {
+  count  = var.enable_media_services ? 1 : 0
+  source = "./modules/media_services"
+
+  project_name     = var.project_name
+  environment      = var.environment
+  enable_cdn       = var.enable_cdn
+  enable_streaming = false  # Enable manually when needed (costs ~$10/day)
+
+  tags = local.common_tags
+
+  depends_on = [module.storage]
 }
 
 # Monitoring Module - CloudWatch dashboards, cost alerts, and cleanup
@@ -338,34 +496,34 @@ module "monitoring" {
 
   # Dashboard configuration
   enable_security_dashboard    = var.monitoring_enable_security_dashboard
-  enable_cost_dashboard       = var.monitoring_enable_cost_dashboard
+  enable_cost_dashboard        = var.monitoring_enable_cost_dashboard
   enable_performance_dashboard = var.monitoring_enable_performance_dashboard
-  dashboard_refresh_interval  = var.monitoring_dashboard_refresh_interval
+  dashboard_refresh_interval   = var.monitoring_dashboard_refresh_interval
 
   # Cost monitoring and budget configuration
-  monthly_budget_limit              = var.monitoring_monthly_budget_limit
-  budget_notification_emails        = var.monitoring_budget_notification_emails
-  enable_service_budgets           = var.monitoring_enable_service_budgets
-  s3_budget_limit                  = var.monitoring_s3_budget_limit
-  rds_budget_limit                 = var.monitoring_rds_budget_limit
-  billing_alarm_threshold          = var.monitoring_billing_alarm_threshold
-  enable_service_cost_alarms       = var.monitoring_enable_service_cost_alarms
-  s3_cost_alarm_threshold          = var.monitoring_s3_cost_alarm_threshold
-  athena_cost_alarm_threshold      = var.monitoring_athena_cost_alarm_threshold
+  monthly_budget_limit               = var.monitoring_monthly_budget_limit
+  budget_notification_emails         = var.monitoring_budget_notification_emails
+  enable_service_budgets             = var.monitoring_enable_service_budgets
+  s3_budget_limit                    = var.monitoring_s3_budget_limit
+  rds_budget_limit                   = var.monitoring_rds_budget_limit
+  billing_alarm_threshold            = var.monitoring_billing_alarm_threshold
+  enable_service_cost_alarms         = var.monitoring_enable_service_cost_alarms
+  s3_cost_alarm_threshold            = var.monitoring_s3_cost_alarm_threshold
+  athena_cost_alarm_threshold        = var.monitoring_athena_cost_alarm_threshold
   data_transfer_cost_alarm_threshold = var.monitoring_data_transfer_cost_alarm_threshold
-  enable_anomaly_detection         = var.monitoring_enable_anomaly_detection
-  anomaly_detection_email          = var.monitoring_anomaly_detection_email
-  anomaly_threshold_amount         = var.monitoring_anomaly_threshold_amount
-  enable_cost_optimization_lambda  = var.monitoring_enable_cost_optimization_lambda
-  cost_optimization_schedule       = var.monitoring_cost_optimization_schedule
+  enable_anomaly_detection           = var.monitoring_enable_anomaly_detection
+  anomaly_detection_email            = var.monitoring_anomaly_detection_email
+  anomaly_threshold_amount           = var.monitoring_anomaly_threshold_amount
+  enable_cost_optimization_lambda    = var.monitoring_enable_cost_optimization_lambda
+  cost_optimization_schedule         = var.monitoring_cost_optimization_schedule
 
   # Automated cleanup configuration
-  enable_automated_cleanup         = var.monitoring_enable_automated_cleanup
-  athena_results_retention_days    = var.monitoring_athena_results_retention_days
-  query_results_retention_days     = var.monitoring_query_results_retention_days
-  log_cleanup_retention_days       = var.monitoring_log_cleanup_retention_days
-  s3_cleanup_schedule              = var.monitoring_s3_cleanup_schedule
-  logs_cleanup_schedule            = var.monitoring_logs_cleanup_schedule
+  enable_automated_cleanup      = var.monitoring_enable_automated_cleanup
+  athena_results_retention_days = var.monitoring_athena_results_retention_days
+  query_results_retention_days  = var.monitoring_query_results_retention_days
+  log_cleanup_retention_days    = var.monitoring_log_cleanup_retention_days
+  s3_cleanup_schedule           = var.monitoring_s3_cleanup_schedule
+  logs_cleanup_schedule         = var.monitoring_logs_cleanup_schedule
 
   additional_tags = local.common_tags
 

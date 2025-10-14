@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   VStack,
@@ -188,80 +188,59 @@ export const StreamHealth: React.FC = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const cardBg = useColorModeValue('gray.50', 'gray.700');
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isLive) {
-      interval = setInterval(() => {
-        updateHealthMetrics();
-      }, 5000);
-    }
-    
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  }, [isLive]);
-
-  const updateHealthMetrics = () => {
+  const updateHealthMetrics = useCallback(() => {
     setHealthData(prev => {
       const newData = { ...prev };
       
-      // Simulate metric updates
-      Object.keys(newData.metrics).forEach(key => {
-        const metric = newData.metrics[key as keyof typeof newData.metrics];
-        const variation = (Math.random() - 0.5) * 0.1;
+      // Simulate metric updates with more realistic variations
+      const metricKeys = Object.keys(newData.metrics) as Array<keyof typeof newData.metrics>;
+      
+      metricKeys.forEach(key => {
+        const metric = newData.metrics[key];
+        const variation = (Math.random() - 0.5) * 0.05; // Reduced variation for stability
         const newValue = metric.value * (1 + variation);
         
         // Update value and history
         metric.value = Math.max(0, newValue);
         metric.history = [...metric.history.slice(1), metric.value];
         
-        // Update status based on thresholds
-        if (key === 'droppedFrames') {
-          // Lower is better for dropped frames
-          if (metric.value <= metric.threshold.excellent) {
-            metric.status = 'excellent';
-          } else if (metric.value <= metric.threshold.good) {
-            metric.status = 'good';
-          } else if (metric.value <= metric.threshold.warning) {
-            metric.status = 'warning';
-          } else {
-            metric.status = 'critical';
-          }
+        // Update status based on thresholds (optimized logic)
+        const isInverted = key === 'droppedFrames';
+        if (isInverted) {
+          metric.status = metric.value <= metric.threshold.excellent ? 'excellent' :
+                         metric.value <= metric.threshold.good ? 'good' :
+                         metric.value <= metric.threshold.warning ? 'warning' : 'critical';
         } else {
-          // Higher is better for other metrics
-          if (metric.value >= metric.threshold.excellent) {
-            metric.status = 'excellent';
-          } else if (metric.value >= metric.threshold.good) {
-            metric.status = 'good';
-          } else if (metric.value >= metric.threshold.warning) {
-            metric.status = 'warning';
-          } else {
-            metric.status = 'critical';
-          }
+          metric.status = metric.value >= metric.threshold.excellent ? 'excellent' :
+                         metric.value >= metric.threshold.good ? 'good' :
+                         metric.value >= metric.threshold.warning ? 'warning' : 'critical';
         }
       });
       
-      // Calculate overall health
+      // Calculate overall health (optimized calculation)
       const statuses = Object.values(newData.metrics).map(m => m.status);
       const criticalCount = statuses.filter(s => s === 'critical').length;
       const warningCount = statuses.filter(s => s === 'warning').length;
       
-      if (criticalCount > 0) {
-        newData.overall = 'critical';
-      } else if (warningCount > 2) {
-        newData.overall = 'warning';
-      } else if (warningCount > 0) {
-        newData.overall = 'good';
-      } else {
-        newData.overall = 'excellent';
-      }
+      newData.overall = criticalCount > 0 ? 'critical' :
+                       warningCount > 2 ? 'warning' :
+                       warningCount > 0 ? 'good' : 'excellent';
       
       return newData;
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isLive) return;
+    
+    const interval = setInterval(updateHealthMetrics, 5000);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isLive, updateHealthMetrics]);
+
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -283,7 +262,7 @@ export const StreamHealth: React.FC = () => {
     }
   };
 
-  const createChartData = (metric: HealthMetric) => ({
+  const createChartData = useCallback((metric: HealthMetric) => ({
     labels: metric.history.map((_, index) => `${index * 5}s ago`).reverse(),
     datasets: [
       {
@@ -295,9 +274,9 @@ export const StreamHealth: React.FC = () => {
         fill: true,
       },
     ],
-  });
+  }), []);
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -318,7 +297,9 @@ export const StreamHealth: React.FC = () => {
         radius: 0,
       },
     },
-  };
+  }), []);
+
+
 
   if (!isLive) {
     return (

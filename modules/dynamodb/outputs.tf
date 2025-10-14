@@ -120,35 +120,35 @@ output "table_configurations" {
   description = "Summary of table configurations"
   value = {
     log_metadata = {
-      name                          = aws_dynamodb_table.log_metadata.name
-      billing_mode                  = aws_dynamodb_table.log_metadata.billing_mode
-      point_in_time_recovery        = aws_dynamodb_table.log_metadata.point_in_time_recovery[0].enabled
-      stream_enabled                = aws_dynamodb_table.log_metadata.stream_enabled
-      ttl_enabled                   = aws_dynamodb_table.log_metadata.ttl[0].enabled
-      global_secondary_indexes      = length(aws_dynamodb_table.log_metadata.global_secondary_index)
+      name                     = aws_dynamodb_table.log_metadata.name
+      billing_mode             = aws_dynamodb_table.log_metadata.billing_mode
+      point_in_time_recovery   = aws_dynamodb_table.log_metadata.point_in_time_recovery[0].enabled
+      stream_enabled           = aws_dynamodb_table.log_metadata.stream_enabled
+      ttl_enabled              = aws_dynamodb_table.log_metadata.ttl[0].enabled
+      global_secondary_indexes = length(aws_dynamodb_table.log_metadata.global_secondary_index)
     }
     user_sessions = {
-      name                          = aws_dynamodb_table.user_sessions.name
-      billing_mode                  = aws_dynamodb_table.user_sessions.billing_mode
-      point_in_time_recovery        = aws_dynamodb_table.user_sessions.point_in_time_recovery[0].enabled
-      stream_enabled                = aws_dynamodb_table.user_sessions.stream_enabled
-      ttl_enabled                   = aws_dynamodb_table.user_sessions.ttl[0].enabled
-      global_secondary_indexes      = length(aws_dynamodb_table.user_sessions.global_secondary_index)
+      name                     = aws_dynamodb_table.user_sessions.name
+      billing_mode             = aws_dynamodb_table.user_sessions.billing_mode
+      point_in_time_recovery   = aws_dynamodb_table.user_sessions.point_in_time_recovery[0].enabled
+      stream_enabled           = aws_dynamodb_table.user_sessions.stream_enabled
+      ttl_enabled              = aws_dynamodb_table.user_sessions.ttl[0].enabled
+      global_secondary_indexes = length(aws_dynamodb_table.user_sessions.global_secondary_index)
     }
     system_config = {
-      name                          = aws_dynamodb_table.system_config.name
-      billing_mode                  = aws_dynamodb_table.system_config.billing_mode
-      point_in_time_recovery        = aws_dynamodb_table.system_config.point_in_time_recovery[0].enabled
-      stream_enabled                = aws_dynamodb_table.system_config.stream_enabled
-      global_secondary_indexes      = length(aws_dynamodb_table.system_config.global_secondary_index)
+      name                     = aws_dynamodb_table.system_config.name
+      billing_mode             = aws_dynamodb_table.system_config.billing_mode
+      point_in_time_recovery   = aws_dynamodb_table.system_config.point_in_time_recovery[0].enabled
+      stream_enabled           = aws_dynamodb_table.system_config.stream_enabled
+      global_secondary_indexes = length(aws_dynamodb_table.system_config.global_secondary_index)
     }
     audit_trail = {
-      name                          = aws_dynamodb_table.audit_trail.name
-      billing_mode                  = aws_dynamodb_table.audit_trail.billing_mode
-      point_in_time_recovery        = aws_dynamodb_table.audit_trail.point_in_time_recovery[0].enabled
-      stream_enabled                = aws_dynamodb_table.audit_trail.stream_enabled
-      ttl_enabled                   = aws_dynamodb_table.audit_trail.ttl[0].enabled
-      global_secondary_indexes      = length(aws_dynamodb_table.audit_trail.global_secondary_index)
+      name                     = aws_dynamodb_table.audit_trail.name
+      billing_mode             = aws_dynamodb_table.audit_trail.billing_mode
+      point_in_time_recovery   = aws_dynamodb_table.audit_trail.point_in_time_recovery[0].enabled
+      stream_enabled           = aws_dynamodb_table.audit_trail.stream_enabled
+      ttl_enabled              = aws_dynamodb_table.audit_trail.ttl[0].enabled
+      global_secondary_indexes = length(aws_dynamodb_table.audit_trail.global_secondary_index)
     }
   }
 }
@@ -194,7 +194,7 @@ output "backup_validation_schedule" {
 output "backup_monitoring_alarms" {
   description = "Map of backup monitoring alarm names"
   value = var.enable_cloudwatch_alarms && var.enable_point_in_time_recovery ? {
-    backup_lag_alarms = { for k, v in aws_cloudwatch_metric_alarm.backup_lag : k => v.alarm_name }
+    backup_lag_alarms     = { for k, v in aws_cloudwatch_metric_alarm.backup_lag : k => v.alarm_name }
     backup_storage_alarms = { for k, v in aws_cloudwatch_metric_alarm.backup_storage_usage : k => v.alarm_name }
   } : {}
 }
@@ -204,9 +204,29 @@ output "backup_configuration" {
   description = "Summary of backup configuration for all tables"
   value = {
     point_in_time_recovery_enabled = var.enable_point_in_time_recovery
-    backup_retention_days         = var.backup_retention_days
-    backup_validation_enabled     = var.enable_backup_validation
-    backup_validation_schedule    = var.backup_validation_schedule
-    backup_storage_threshold_gb   = var.backup_storage_threshold_bytes / 1073741824
+    backup_retention_days          = var.backup_retention_days
+    backup_validation_enabled      = var.enable_backup_validation
+    backup_validation_schedule     = var.backup_validation_schedule
+    backup_storage_threshold_gb    = var.backup_storage_threshold_bytes / 1073741824
   }
+}
+
+output "connections_table_name" {
+  description = "WebSocket connections table name"
+  value       = aws_dynamodb_table.connections.name
+}
+
+output "messages_table_name" {
+  description = "Chat messages table name"
+  value       = aws_dynamodb_table.messages.name
+}
+
+output "users_table_name" {
+  description = "Users table name"
+  value       = aws_dynamodb_table.users.name
+}
+
+output "streams_table_name" {
+  description = "Streams table name"
+  value       = aws_dynamodb_table.streams.name
 }
