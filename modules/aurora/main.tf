@@ -467,3 +467,133 @@ resource "aws_cloudwatch_metric_alarm" "aurora_replica_lag" {
     Service     = "aurora"
   }
 }
+# Data source for current region
+data "aws_region" "current" {}
+
+# Lambda function for database initialization
+resource "aws_lambda_function" "db_init" {
+  filename      = "${path.module}/lambda/db_init.zip"
+  function_name = "${var.project_name}-${var.environment}-aurora-db-init"
+  role          = aws_iam_role.lambda_db_init.arn
+  handler       = "db_init.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 300
+  memory_size   = 256
+
+  environment {
+    variables = {
+      DB_HOST    = aws_rds_cluster.aurora.endpoint
+      DB_PORT    = aws_rds_cluster.aurora.port
+      DB_NAME    = var.database_name
+      SECRET_ARN = aws_secretsmanager_secret.aurora_master.arn
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = var.database_subnet_ids
+    security_group_ids = [var.aurora_security_group_id]
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_db_init_vpc,
+    aws_iam_role_policy_attachment.lambda_db_init_secrets,
+    aws_cloudwatch_log_group.lambda_db_init
+  ]
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-aurora-db-init"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "aurora"
+  }
+}
+
+# IAM role for Lambda database initialization function
+resource "aws_iam_role" "lambda_db_init" {
+  name = "${var.project_name}-${var.environment}-lambda-db-init-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-lambda-db-init-role"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "aurora"
+  }
+}
+
+# IAM policy attachments for Lambda
+resource "aws_iam_role_policy_attachment" "lambda_db_init_vpc" {
+  role       = aws_iam_role.lambda_db_init.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_db_init_secrets" {
+  role       = aws_iam_role.lambda_db_init.name
+  policy_arn = aws_iam_policy.lambda_db_init_secrets.arn
+}
+
+# IAM policy for Secrets Manager access
+resource "aws_iam_policy" "lambda_db_init_secrets" {
+  name        = "${var.project_name}-${var.environment}-lambda-db-init-secrets-policy"
+  description = "IAM policy for Lambda to access Aurora secrets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = aws_secretsmanager_secret.aurora_master.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = aws_kms_key.aurora.arn
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-lambda-db-init-secrets-policy"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "aurora"
+  }
+}
+
+# CloudWatch Log Group for Lambda
+resource "aws_cloudwatch_log_group" "lambda_db_init" {
+  name              = "/aws/lambda/${var.project_name}-${var.environment}-aurora-db-init"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = aws_kms_key.aurora.arn
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-lambda-db-init-logs"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "aurora"
+  }
+}
+
+# Create Lambda deployment package
+data "archive_file" "lambda_db_init" {
+  type        = "zip"
+  source_file = "${path.module}/lambda/db_init.py"
+  output_path = "${path.module}/lambda/db_init.zip"
+}

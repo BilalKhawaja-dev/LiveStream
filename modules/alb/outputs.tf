@@ -58,8 +58,8 @@ output "http_listener_arn" {
 }
 
 output "https_listener_arn" {
-  description = "ARN of the HTTPS listener"
-  value       = aws_lb_listener.frontend_https.arn
+  description = "ARN of the HTTPS listener (null if no certificate provided)"
+  value       = var.certificate_arn != null ? aws_lb_listener.frontend_https[0].arn : null
 }
 
 output "listener_rule_arns" {

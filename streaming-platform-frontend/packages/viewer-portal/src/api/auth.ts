@@ -6,45 +6,112 @@ export interface User {
   isStreamer: boolean;
 }
 
-// Dummy users for development
-const DUMMY_USERS: User[] = [
-  { id: '1', email: 'viewer@test.com', subscription: 'bronze', isStreamer: false },
-  { id: '2', email: 'streamer@test.com', subscription: 'gold', isStreamer: true },
-  { id: '3', email: 'admin@test.com', subscription: 'gold', isStreamer: true },
-];
+import { CognitoIdentityProviderClient, InitiateAuthCommand, SignUpCommand, GetUserCommand, GlobalSignOutCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from '@aws-sdk/client-dynamodb';
+
+const cognitoClient = new CognitoIdentityProviderClient({ region: 'us-east-1' });
+const dynamoClient = new DynamoDBClient({ region: 'us-east-1' });
+const CLIENT_ID = process.env.REACT_APP_COGNITO_CLIENT_ID || 'your-client-id';
 
 export const authAPI = {
   login: async (email: string, password: string): Promise<User | null> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const user = DUMMY_USERS.find(u => u.email === email);
-    if (user && password === 'password') {
-      localStorage.setItem('user', JSON.stringify(user));
-      return user;
+    try {
+      const command = new InitiateAuthCommand({
+        ClientId: CLIENT_ID,
+        AuthFlow: 'USER_PASSWORD_AUTH',
+        AuthParameters: {
+          USERNAME: email,
+          PASSWORD: password
+        }
+      });
+      
+      const response = await cognitoClient.send(command);
+      const accessToken = response.AuthenticationResult?.AccessToken;
+      
+      if (accessToken) {
+        localStorage.setItem('accessToken', accessToken);
+        return await this.getCurrentUser();
+      }
+      return null;
+    } catch (error) {
+      console.error('Login error:', error);
+      return null;
     }
-    return null;
   },
 
   logout: async (): Promise<void> => {
-    localStorage.removeItem('user');
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        await cognitoClient.send(new GlobalSignOutCommand({ AccessToken: token }));
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('accessToken');
+    }
   },
 
-  getCurrentUser: (): User | null => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+  getCurrentUser: async (): Promise<User | null> => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+      
+      const command = new GetUserCommand({ AccessToken: token });
+      const response = await cognitoClient.send(command);
+      
+      const userId = response.UserAttributes?.find(attr => attr.Name === 'sub')?.Value || '';
+      const email = response.UserAttributes?.find(attr => attr.Name === 'email')?.Value || '';
+      
+      // Get user profile from DynamoDB
+      const userProfile = await dynamoClient.send(new GetItemCommand({
+        TableName: 'streaming-users',
+        Key: { user_id: { S: userId } }
+      }));
+      
+      return {
+        id: userId,
+        email,
+        subscription: (userProfile.Item?.subscription?.S as any) || 'bronze',
+        isStreamer: userProfile.Item?.is_streamer?.BOOL || false
+      };
+    } catch (error) {
+      console.error('Get user error:', error);
+      localStorage.removeItem('accessToken');
+      return null;
+    }
   },
 
   register: async (email: string, password: string): Promise<User> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const command = new SignUpCommand({
+      ClientId: CLIENT_ID,
+      Username: email,
+      Password: password,
+      UserAttributes: [
+        { Name: 'email', Value: email }
+      ]
+    });
     
-    const newUser: User = {
-      id: Date.now().toString(),
+    const response = await cognitoClient.send(command);
+    const userId = response.UserSub || '';
+    
+    // Create user profile in DynamoDB
+    await dynamoClient.send(new PutItemCommand({
+      TableName: 'streaming-users',
+      Item: {
+        user_id: { S: userId },
+        email: { S: email },
+        subscription: { S: 'bronze' },
+        is_streamer: { BOOL: false },
+        created_at: { S: new Date().toISOString() }
+      }
+    }));
+    
+    return {
+      id: userId,
       email,
       subscription: 'bronze',
       isStreamer: false
     };
-    
-    localStorage.setItem('user', JSON.stringify(newUser));
-    return newUser;
   }
 };

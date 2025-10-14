@@ -1,0 +1,39 @@
+{
+  "name": "@streaming-platform/shared",
+  "version": "1.0.0",
+  "description": "Shared components and utilities for streaming platform frontend applications",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint . --ext .ts,.tsx",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "amazon-cognito-identity-js": "^6.3.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
+  },
+  "keywords": [
+    "react",
+    "authentication",
+    "cognito",
+    "jwt",
+    "streaming",
+    "frontend"
+  ],
+  "author": "Streaming Platform Team",
+  "license": "MIT"
+}

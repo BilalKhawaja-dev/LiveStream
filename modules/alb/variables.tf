@@ -27,8 +27,9 @@ variable "public_subnet_ids" {
 }
 
 variable "certificate_arn" {
-  description = "ARN of the SSL certificate for HTTPS listener"
+  description = "ARN of the SSL certificate for HTTPS listener (optional for dev)"
   type        = string
+  default     = null
 }
 
 variable "frontend_applications" {
@@ -94,7 +95,7 @@ variable "idle_timeout" {
 variable "ssl_policy" {
   description = "SSL policy for HTTPS listener"
   type        = string
-  default     = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  default     = "ELBSecurityPolicy-TLS13-1-2-2021-06"
 }
 
 # Access Logs

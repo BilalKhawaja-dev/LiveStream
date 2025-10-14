@@ -30,6 +30,12 @@ variable "enable_vpc_endpoints" {
   default     = true
 }
 
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for private subnet internet access (costs ~$45/month)"
+  type        = bool
+  default     = false # Disabled by default for cost optimization
+}
+
 variable "tags" {
   description = "Additional tags to apply to resources"
   type        = map(string)

@@ -16,7 +16,7 @@ variable "environment" {
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
-  default     = "streaming-logs"
+  default     = "streaming-platform"
 }
 
 # Logging Configuration
@@ -356,6 +356,12 @@ variable "availability_zones" {
   default     = ["eu-west-2a", "eu-west-2b"]
 }
 
+variable "enable_nat_gateway" {
+  description = "Enable NAT Gateway for private subnet internet access (costs ~$45/month)"
+  type        = bool
+  default     = false # Disabled by default for cost optimization in dev
+}
+
 # Cost Optimization Flags
 variable "enable_cross_region_backup" {
   description = "Enable cross-region backup (disabled for dev cost optimization)"
@@ -649,7 +655,7 @@ variable "monitoring_logs_cleanup_schedule" {
 variable "enable_ecs" {
   description = "Enable ECS for containerized applications"
   type        = bool
-  default     = false  # Disabled by default for cost optimization
+  default     = true # Enabled for streaming platform frontend applications
 }
 
 variable "ecs_applications" {
@@ -668,46 +674,400 @@ variable "ecs_applications" {
 variable "ecs_task_cpu" {
   description = "CPU units for ECS tasks"
   type        = number
-  default     = 256  # Development optimized
+  default     = 256 # Development optimized
 }
 
 variable "ecs_task_memory" {
   description = "Memory for ECS tasks (MB)"
   type        = number
-  default     = 512  # Development optimized
+  default     = 512 # Development optimized
 }
 
 variable "ecs_desired_count" {
   description = "Desired number of ECS tasks per service"
   type        = number
-  default     = 1  # Development optimized
+  default     = 1 # Development optimized
 }
 
 variable "ecs_use_spot_instances" {
   description = "Use Fargate Spot instances for cost optimization"
   type        = bool
-  default     = true  # Cost optimization
+  default     = true # Cost optimization
 }
 
 variable "ecs_enable_container_insights" {
   description = "Enable CloudWatch Container Insights"
   type        = bool
-  default     = false  # Disabled for cost optimization in dev
+  default     = false # Disabled for cost optimization in dev
 }
 
-# SSL Certificate
-variable "ssl_certificate_arn" {
-  description = "ARN of SSL certificate for ALB (leave empty to skip HTTPS)"
+variable "ecs_enable_exec" {
+  description = "Enable ECS Exec for debugging containers"
+  type        = bool
+  default     = false # Disabled by default for security
+}
+
+# ECS Capacity Provider Configuration
+variable "ecs_fargate_base_capacity" {
+  description = "Base capacity for Fargate capacity provider"
+  type        = number
+  default     = 1
+}
+
+variable "ecs_fargate_weight" {
+  description = "Weight for Fargate capacity provider"
+  type        = number
+  default     = 1
+}
+
+variable "ecs_fargate_spot_base_capacity" {
+  description = "Base capacity for Fargate Spot capacity provider"
+  type        = number
+  default     = 0
+}
+
+variable "ecs_fargate_spot_weight" {
+  description = "Weight for Fargate Spot capacity provider"
+  type        = number
+  default     = 4 # Prefer Spot instances for cost optimization
+}
+
+# ECS Auto Scaling Configuration
+variable "ecs_min_capacity" {
+  description = "Minimum number of tasks for auto scaling"
+  type        = number
+  default     = 1
+}
+
+variable "ecs_max_capacity" {
+  description = "Maximum number of tasks for auto scaling"
+  type        = number
+  default     = 10
+}
+
+variable "ecs_cpu_target_value" {
+  description = "Target CPU utilization percentage for auto scaling"
+  type        = number
+  default     = 70
+}
+
+variable "ecs_memory_target_value" {
+  description = "Target memory utilization percentage for auto scaling"
+  type        = number
+  default     = 80
+}
+
+variable "ecs_scale_in_cooldown" {
+  description = "Cooldown period in seconds for scale in operations"
+  type        = number
+  default     = 300
+}
+
+variable "ecs_scale_out_cooldown" {
+  description = "Cooldown period in seconds for scale out operations"
+  type        = number
+  default     = 60
+}
+
+variable "ecs_enable_spot_instances" {
+  description = "Enable Fargate Spot instances for cost optimization"
+  type        = bool
+  default     = true
+}
+
+variable "ecs_scheduled_scaling_enabled" {
+  description = "Enable scheduled scaling for predictable workloads"
+  type        = bool
+  default     = false
+}
+
+# Container Configuration
+variable "ecr_repository_url" {
+  description = "ECR repository URL for container images"
   type        = string
-  default     = ""  # No SSL by default for development
+  default     = "" # Must be provided when ECS is enabled
+}
+
+variable "container_image_tag" {
+  description = "Container image tag to deploy"
+  type        = string
+  default     = "latest"
+}
+
+# JWT Configuration
+variable "jwt_authorizer_cache_ttl" {
+  description = "JWT authorizer cache TTL in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "lambda_log_level" {
+  description = "Log level for Lambda functions"
+  type        = string
+  default     = "INFO"
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], var.lambda_log_level)
+    error_message = "Lambda log level must be one of: DEBUG, INFO, WARNING, ERROR, CRITICAL."
+  }
 }
 
 # Media Services Configuration
 variable "enable_media_services" {
-  description = "Enable media services for streaming"
+  description = "Enable media services (S3 + CloudFront)"
+  type        = bool
+  default     = true
+}
+
+variable "media_enable_versioning" {
+  description = "Enable S3 bucket versioning for media content"
   type        = bool
   default     = false
 }
+
+variable "media_ia_transition_days" {
+  description = "Days after which media objects transition to IA storage"
+  type        = number
+  default     = 30
+}
+
+variable "media_glacier_transition_days" {
+  description = "Days after which media objects transition to Glacier"
+  type        = number
+  default     = 90
+}
+
+variable "media_deep_archive_transition_days" {
+  description = "Days after which media objects transition to Deep Archive"
+  type        = number
+  default     = 365
+}
+
+variable "media_noncurrent_version_expiration_days" {
+  description = "Days after which noncurrent media versions expire"
+  type        = number
+  default     = 30
+}
+
+variable "enable_cloudfront" {
+  description = "Enable CloudFront CDN for media delivery"
+  type        = bool
+  default     = true
+}
+
+variable "media_custom_domain" {
+  description = "Custom domain for media CDN"
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_default_cache_ttl" {
+  description = "Default CloudFront cache TTL in seconds"
+  type        = number
+  default     = 86400
+}
+
+variable "cloudfront_max_cache_ttl" {
+  description = "Maximum CloudFront cache TTL in seconds"
+  type        = number
+  default     = 31536000
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class for cost optimization"
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "cloudfront_geo_restriction_type" {
+  description = "CloudFront geographic restriction type"
+  type        = string
+  default     = "none"
+}
+
+variable "cloudfront_geo_restriction_locations" {
+  description = "CloudFront geographic restriction locations"
+  type        = list(string)
+  default     = []
+}
+
+variable "media_cors_allowed_origins" {
+  description = "CORS allowed origins for media content"
+  type        = list(string)
+  default     = ["*"]
+}
+
+variable "enable_media_monitoring" {
+  description = "Enable media services monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "media_s3_size_alarm_threshold_gb" {
+  description = "S3 bucket size threshold in GB for alarms"
+  type        = number
+  default     = 100
+}
+
+variable "media_cloudfront_4xx_threshold" {
+  description = "CloudFront 4xx error rate threshold"
+  type        = number
+  default     = 5
+}
+
+variable "media_enable_intelligent_tiering" {
+  description = "Enable S3 Intelligent Tiering for media"
+  type        = bool
+  default     = true
+}
+
+variable "media_enable_transfer_acceleration" {
+  description = "Enable S3 Transfer Acceleration for media"
+  type        = bool
+  default     = false
+}
+
+# Monitoring Configuration
+variable "enable_monitoring_alerts" {
+  description = "Enable monitoring alerts and notifications"
+  type        = bool
+  default     = true
+}
+
+# SSL Certificate and Domain Configuration
+variable "ssl_certificate_arn" {
+  description = "ARN of existing SSL certificate for ALB (leave empty to auto-create with ACM)"
+  type        = string
+  default     = ""
+}
+
+variable "domain_name" {
+  description = "Primary domain name for the application (leave empty for development without SSL)"
+  type        = string
+  default     = ""
+}
+
+variable "subject_alternative_names" {
+  description = "Additional domain names for the SSL certificate"
+  type        = list(string)
+  default     = []
+}
+
+variable "enable_wildcard_certificate" {
+  description = "Create a wildcard certificate for subdomains"
+  type        = bool
+  default     = false
+}
+
+variable "enable_ipv6" {
+  description = "Enable IPv6 support"
+  type        = bool
+  default     = false
+}
+
+variable "enable_certificate_monitoring" {
+  description = "Enable SSL certificate expiry monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "certificate_expiry_threshold_days" {
+  description = "Days before certificate expiry to trigger alarm"
+  type        = number
+  default     = 30
+}
+
+# WAF Configuration
+variable "enable_waf" {
+  description = "Enable AWS WAF for application security"
+  type        = bool
+  default     = true
+}
+
+variable "waf_rate_limit_per_5min" {
+  description = "WAF rate limit per 5 minutes per IP address"
+  type        = number
+  default     = 2000
+}
+
+variable "waf_enable_geo_blocking" {
+  description = "Enable geographic blocking in WAF"
+  type        = bool
+  default     = false
+}
+
+variable "waf_blocked_countries" {
+  description = "List of country codes to block (ISO 3166-1 alpha-2)"
+  type        = list(string)
+  default     = []
+}
+
+variable "waf_allowed_ip_ranges" {
+  description = "List of allowed IP ranges in CIDR notation"
+  type        = list(string)
+  default     = []
+}
+
+variable "waf_admin_ip_ranges" {
+  description = "List of admin IP ranges in CIDR notation for admin path access"
+  type        = list(string)
+  default     = []
+}
+
+variable "waf_max_request_body_size" {
+  description = "Maximum request body size in bytes for WAF"
+  type        = number
+  default     = 8192
+}
+
+variable "waf_excluded_common_rules" {
+  description = "List of AWS Managed Common Rule Set rules to exclude"
+  type        = list(string)
+  default     = []
+}
+
+variable "waf_enable_sql_injection_protection" {
+  description = "Enable SQL injection protection in WAF"
+  type        = bool
+  default     = true
+}
+
+variable "waf_enable_xss_protection" {
+  description = "Enable XSS protection in WAF"
+  type        = bool
+  default     = true
+}
+
+variable "waf_enable_size_restrictions" {
+  description = "Enable request size restrictions in WAF"
+  type        = bool
+  default     = true
+}
+
+variable "waf_enable_admin_path_protection" {
+  description = "Enable admin path protection in WAF"
+  type        = bool
+  default     = true
+}
+
+variable "waf_enable_alarms" {
+  description = "Enable CloudWatch alarms for WAF"
+  type        = bool
+  default     = true
+}
+
+variable "waf_blocked_requests_threshold" {
+  description = "Threshold for WAF blocked requests alarm"
+  type        = number
+  default     = 100
+}
+
+variable "waf_rate_limit_alarm_threshold" {
+  description = "Threshold for WAF rate limit alarm"
+  type        = number
+  default     = 50
+}
+
+# Duplicate variable removed - already defined above
 
 variable "enable_cdn" {
   description = "Enable CloudFront CDN"
@@ -719,4 +1079,126 @@ variable "enable_streaming" {
   description = "Enable MediaLive streaming (WARNING: Costs ~$10/day when running)"
   type        = bool
   default     = false
+}
+
+# API Gateway Configuration
+variable "api_gateway_allowed_ips" {
+  description = "List of allowed IP ranges for API Gateway access"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "api_gateway_cors_origin" {
+  description = "CORS allow origin header value for API Gateway"
+  type        = string
+  default     = "'*'"
+}
+
+variable "api_gateway_logging_level" {
+  description = "API Gateway logging level"
+  type        = string
+  default     = "INFO"
+}
+
+variable "api_gateway_enable_xray" {
+  description = "Enable X-Ray tracing for API Gateway"
+  type        = bool
+  default     = true
+}
+
+variable "api_gateway_rate_limit" {
+  description = "API Gateway throttling rate limit (requests per second)"
+  type        = number
+  default     = 1000
+}
+
+variable "api_gateway_burst_limit" {
+  description = "API Gateway throttling burst limit"
+  type        = number
+  default     = 2000
+}
+
+variable "api_gateway_enable_caching" {
+  description = "Enable API Gateway caching"
+  type        = bool
+  default     = false
+}
+
+variable "api_gateway_cache_ttl" {
+  description = "API Gateway cache TTL in seconds"
+  type        = number
+  default     = 300
+}
+
+variable "api_gateway_basic_quota" {
+  description = "Daily quota limit for basic API plan"
+  type        = number
+  default     = 10000
+}
+
+variable "api_gateway_basic_rate" {
+  description = "Rate limit for basic API plan (requests per second)"
+  type        = number
+  default     = 100
+}
+
+variable "api_gateway_basic_burst" {
+  description = "Burst limit for basic API plan"
+  type        = number
+  default     = 200
+}
+
+variable "api_gateway_premium_quota" {
+  description = "Daily quota limit for premium API plan"
+  type        = number
+  default     = 50000
+}
+
+variable "api_gateway_premium_rate" {
+  description = "Rate limit for premium API plan (requests per second)"
+  type        = number
+  default     = 500
+}
+
+variable "api_gateway_premium_burst" {
+  description = "Burst limit for premium API plan"
+  type        = number
+  default     = 1000
+}
+
+variable "api_gateway_admin_quota" {
+  description = "Daily quota limit for admin API plan"
+  type        = number
+  default     = 100000
+}
+
+variable "api_gateway_admin_rate" {
+  description = "Rate limit for admin API plan (requests per second)"
+  type        = number
+  default     = 1000
+}
+
+variable "api_gateway_admin_burst" {
+  description = "Burst limit for admin API plan"
+  type        = number
+  default     = 2000
+}
+
+variable "api_gateway_create_keys" {
+  description = "Create API keys for usage plans"
+  type        = bool
+  default     = true
+}
+
+# Aurora backup and maintenance windows
+variable "aurora_preferred_backup_window" {
+  description = "Preferred backup window for Aurora cluster"
+  type        = string
+  default     = "03:00-04:00"
+}
+
+variable "aurora_preferred_maintenance_window" {
+  description = "Preferred maintenance window for Aurora cluster"
+  type        = string
+  default     = "sun:04:00-sun:05:00"
 }

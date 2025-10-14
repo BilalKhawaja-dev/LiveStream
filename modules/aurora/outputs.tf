@@ -114,3 +114,19 @@ output "connection_info" {
   }
   sensitive = true
 }
+
+# Database initialization Lambda function
+output "db_init_lambda_function_name" {
+  description = "Name of the database initialization Lambda function"
+  value       = aws_lambda_function.db_init.function_name
+}
+
+output "db_init_lambda_function_arn" {
+  description = "ARN of the database initialization Lambda function"
+  value       = aws_lambda_function.db_init.arn
+}
+
+output "db_init_lambda_invoke_command" {
+  description = "AWS CLI command to invoke the database initialization function"
+  value       = "aws lambda invoke --function-name ${aws_lambda_function.db_init.function_name} --region ${data.aws_region.current.name} response.json"
+}

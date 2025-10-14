@@ -60,6 +60,27 @@ output "database_route_table_id" {
   value       = aws_route_table.database.id
 }
 
+output "nat_gateway_id" {
+  description = "ID of the NAT Gateway (if enabled)"
+  value       = var.enable_nat_gateway ? aws_nat_gateway.main[0].id : null
+}
+
+output "nat_gateway_public_ip" {
+  description = "Public IP of the NAT Gateway (if enabled)"
+  value       = var.enable_nat_gateway ? aws_eip.nat[0].public_ip : null
+}
+
+output "vpc_endpoints" {
+  description = "Map of VPC endpoint IDs"
+  value = var.enable_vpc_endpoints ? {
+    s3       = aws_vpc_endpoint.s3[0].id
+    dynamodb = aws_vpc_endpoint.dynamodb[0].id
+    ecr_api  = aws_vpc_endpoint.ecr_api[0].id
+    ecr_dkr  = aws_vpc_endpoint.ecr_dkr[0].id
+    logs     = aws_vpc_endpoint.logs[0].id
+  } : {}
+}
+
 # Network configuration summary
 output "network_configuration" {
   description = "Summary of network configuration"
@@ -73,5 +94,8 @@ output "network_configuration" {
     aurora_security_group = aws_security_group.aurora.id
     aurora_subnet_group   = aws_db_subnet_group.aurora.name
     ecs_security_group    = aws_security_group.ecs.id
+    nat_gateway_enabled   = var.enable_nat_gateway
+    vpc_endpoints_enabled = var.enable_vpc_endpoints
+    cost_optimization     = !var.enable_nat_gateway && var.enable_vpc_endpoints
   }
 }

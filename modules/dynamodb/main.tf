@@ -1013,8 +1013,8 @@ resource "aws_dynamodb_table" "users" {
   }
 
   global_secondary_index {
-    name     = "EmailIndex"
-    hash_key = "email"
+    name            = "EmailIndex"
+    hash_key        = "email"
     projection_type = "ALL"
   }
 
@@ -1044,14 +1044,14 @@ resource "aws_dynamodb_table" "streams" {
   }
 
   global_secondary_index {
-    name     = "UserIndex"
-    hash_key = "user_id"
+    name            = "UserIndex"
+    hash_key        = "user_id"
     projection_type = "ALL"
   }
 
   global_secondary_index {
-    name     = "StatusIndex"
-    hash_key = "status"
+    name            = "StatusIndex"
+    hash_key        = "status"
     projection_type = "ALL"
   }
 

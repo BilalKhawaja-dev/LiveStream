@@ -1,0 +1,159 @@
+# Docker Compose for Streaming Platform Frontend Applications
+version: '3.8'
+
+services:
+  # Viewer Portal
+  viewer-portal:
+    build:
+      context: .
+      dockerfile: packages/viewer-portal/Dockerfile
+    container_name: streaming-viewer-portal
+    ports:
+      - "3001:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+      - REACT_APP_WS_URL=${WEBSOCKET_URL:-ws://localhost:3000/ws}
+      - REACT_APP_MEDIA_URL=${MEDIA_URL:-http://localhost:3000/media}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Creator Dashboard
+  creator-dashboard:
+    build:
+      context: .
+      dockerfile: packages/creator-dashboard/Dockerfile
+    container_name: streaming-creator-dashboard
+    ports:
+      - "3002:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+      - REACT_APP_WS_URL=${WEBSOCKET_URL:-ws://localhost:3000/ws}
+      - REACT_APP_MEDIA_URL=${MEDIA_URL:-http://localhost:3000/media}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Admin Portal
+  admin-portal:
+    build:
+      context: .
+      dockerfile: packages/admin-portal/Dockerfile
+    container_name: streaming-admin-portal
+    ports:
+      - "3003:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+      - REACT_APP_WS_URL=${WEBSOCKET_URL:-ws://localhost:3000/ws}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Support System
+  support-system:
+    build:
+      context: .
+      dockerfile: packages/support-system/Dockerfile
+    container_name: streaming-support-system
+    ports:
+      - "3004:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+      - REACT_APP_WS_URL=${WEBSOCKET_URL:-ws://localhost:3000/ws}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Analytics Dashboard
+  analytics-dashboard:
+    build:
+      context: .
+      dockerfile: packages/analytics-dashboard/Dockerfile
+    container_name: streaming-analytics-dashboard
+    ports:
+      - "3005:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Developer Console
+  developer-console:
+    build:
+      context: .
+      dockerfile: packages/developer-console/Dockerfile
+    container_name: streaming-developer-console
+    ports:
+      - "3006:80"
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=${API_GATEWAY_URL:-http://localhost:3000/api}
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Load Balancer (for testing ALB behavior locally)
+  nginx-lb:
+    image: nginx:1.25-alpine
+    container_name: streaming-load-balancer
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx-lb.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - viewer-portal
+      - creator-dashboard
+      - admin-portal
+      - support-system
+      - analytics-dashboard
+      - developer-console
+    networks:
+      - streaming-network
+    restart: unless-stopped
+
+networks:
+  streaming-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  node_modules_cache:
+    driver: local

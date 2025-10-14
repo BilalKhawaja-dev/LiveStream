@@ -14,8 +14,8 @@ class ChatService {
   private connectionHandlers: ((connected: boolean) => void)[] = [];
 
   connect(streamId: string, userId: string) {
-    // Use WebSocket API Gateway endpoint (will be populated by Terraform)
-    const wsUrl = process.env.REACT_APP_WS_ENDPOINT || 'ws://localhost:3001';
+    // Use WebSocket API Gateway endpoint from Terraform output
+    const wsUrl = process.env.REACT_APP_WS_ENDPOINT || 'wss://your-websocket-api-id.execute-api.us-east-1.amazonaws.com/prod';
     
     this.ws = new WebSocket(wsUrl);
     

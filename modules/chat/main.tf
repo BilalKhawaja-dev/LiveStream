@@ -1,7 +1,7 @@
 # API Gateway for WebSocket chat
 resource "aws_apigatewayv2_api" "chat" {
-  name          = "${var.project_name}-${var.environment}-chat"
-  protocol_type = "WEBSOCKET"
+  name                       = "${var.project_name}-${var.environment}-chat"
+  protocol_type              = "WEBSOCKET"
   route_selection_expression = "$request.body.action"
 
   tags = var.tags
@@ -49,9 +49,9 @@ resource "aws_apigatewayv2_integration" "message" {
 data "archive_file" "chat_connect" {
   type        = "zip"
   output_path = "chat_connect.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 
@@ -79,9 +79,9 @@ EOF
 data "archive_file" "chat_disconnect" {
   type        = "zip"
   output_path = "chat_disconnect.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 
@@ -104,9 +104,9 @@ EOF
 data "archive_file" "chat_message" {
   type        = "zip"
   output_path = "chat_message.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 from datetime import datetime
@@ -167,10 +167,10 @@ EOF
 resource "aws_lambda_function" "chat_connect" {
   filename         = data.archive_file.chat_connect.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-connect"
-  role            = var.lambda_role_arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 30
+  role             = var.lambda_role_arn
+  handler          = "index.handler"
+  runtime          = "python3.9"
+  timeout          = 30
   source_code_hash = data.archive_file.chat_connect.output_base64sha256
 
   environment {
@@ -185,10 +185,10 @@ resource "aws_lambda_function" "chat_connect" {
 resource "aws_lambda_function" "chat_disconnect" {
   filename         = data.archive_file.chat_disconnect.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-disconnect"
-  role            = var.lambda_role_arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 30
+  role             = var.lambda_role_arn
+  handler          = "index.handler"
+  runtime          = "python3.9"
+  timeout          = 30
   source_code_hash = data.archive_file.chat_disconnect.output_base64sha256
 
   environment {
@@ -203,10 +203,10 @@ resource "aws_lambda_function" "chat_disconnect" {
 resource "aws_lambda_function" "chat_message" {
   filename         = data.archive_file.chat_message.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-message"
-  role            = var.lambda_role_arn
-  handler         = "index.handler"
-  runtime         = "python3.9"
-  timeout         = 30
+  role             = var.lambda_role_arn
+  handler          = "index.handler"
+  runtime          = "python3.9"
+  timeout          = 30
   source_code_hash = data.archive_file.chat_message.output_base64sha256
 
   environment {
