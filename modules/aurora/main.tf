@@ -69,14 +69,17 @@ resource "aws_secretsmanager_secret_version" "aurora_master" {
 
 # Aurora Serverless v2 cluster
 resource "aws_rds_cluster" "aurora" {
-  cluster_identifier          = "${var.project_name}-${var.environment}-aurora-cluster"
-  engine                      = "aurora-mysql"
-  engine_version              = var.engine_version
-  engine_mode                 = "provisioned"
-  database_name               = var.database_name
-  master_username             = var.master_username
-  manage_master_user_password = false
-  master_password             = random_password.aurora_master.result
+  cluster_identifier = "${var.project_name}-${var.environment}-aurora-cluster"
+  engine             = "aurora-mysql"
+  engine_version     = var.engine_version
+  engine_mode        = "provisioned"
+  database_name      = var.database_name
+  master_username    = var.master_username
+  master_password    = random_password.aurora_master.result
+
+  lifecycle {
+    create_before_destroy = false
+  }
 
   # Backup configuration
   backup_retention_period      = var.backup_retention_period
@@ -140,6 +143,12 @@ resource "aws_rds_cluster_instance" "aurora_instances" {
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  depends_on = [aws_rds_cluster.aurora]
+
   # Monitoring
   monitoring_interval = var.monitoring_interval
   monitoring_role_arn = var.monitoring_interval > 0 ? aws_iam_role.rds_enhanced_monitoring[0].arn : null
@@ -169,7 +178,6 @@ resource "aws_cloudwatch_log_group" "aurora_logs" {
 
   name              = "/aws/rds/cluster/${var.project_name}-${var.environment}-aurora-cluster/${each.value}"
   retention_in_days = var.log_retention_days
-  kms_key_id        = aws_kms_key.aurora.arn
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-aurora-${each.value}-logs"
@@ -581,7 +589,6 @@ resource "aws_iam_policy" "lambda_db_init_secrets" {
 resource "aws_cloudwatch_log_group" "lambda_db_init" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-aurora-db-init"
   retention_in_days = var.log_retention_days
-  kms_key_id        = aws_kms_key.aurora.arn
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-lambda-db-init-logs"

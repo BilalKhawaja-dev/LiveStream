@@ -43,7 +43,7 @@ import {
   StatArrow,
 } from '@chakra-ui/react';
 import {
-  CurrencyPoundSterlingIcon,
+  CurrencyDollarIcon,
   BanknotesIcon,
   GiftIcon,
   TrophyIcon,
@@ -235,11 +235,11 @@ export const RevenueTracking: React.FC = () => {
 
   const getRevenueTypeIcon = (type: string) => {
     switch (type) {
-      case 'subscription': return CurrencyPoundSterlingIcon;
+      case 'subscription': return CurrencyDollarIcon;
       case 'donation': return GiftIcon;
       case 'sponsorship': return TrophyIcon;
       case 'merchandise': return BanknotesIcon;
-      default: return CurrencyPoundSterlingIcon;
+      default: return CurrencyDollarIcon;
     }
   };
 

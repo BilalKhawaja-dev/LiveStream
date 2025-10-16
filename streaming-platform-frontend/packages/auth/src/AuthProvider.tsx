@@ -5,6 +5,8 @@ interface User {
   username: string;
   email: string;
   role: string;
+  displayName?: string;
+  subscriptionTier?: string;
 }
 
 interface AuthContextType {
@@ -12,6 +14,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  isAuthenticated: boolean;
+  hasSubscription: (tier: string) => boolean;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,12 +47,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           username: 'testuser',
           email: 'test@example.com',
           role: 'creator',
+          displayName: 'Test User',
+          subscriptionTier: 'gold',
         });
       } catch (error) {
         // Use secure logging to prevent log injection
-        import('@streaming/shared').then(({ secureLogger }) => {
-          secureLogger.error('Auth check failed', error, { component: 'AuthProvider', action: 'checkAuth' });
-        });
+        console.error('Auth check failed:', error);
       } finally {
         setIsLoading(false);
       }
@@ -56,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, _password: string) => {
     setIsLoading(true);
     try {
       // Mock login
@@ -65,12 +70,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         username: 'testuser',
         email,
         role: 'creator',
+        displayName: 'Test User',
+        subscriptionTier: 'gold',
       });
     } catch (error) {
       // Use secure logging to prevent log injection
-      import('@streaming/shared').then(({ secureLogger }) => {
-        secureLogger.error('Login failed', error, { component: 'AuthProvider', action: 'login' });
-      });
+      console.error('Login failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -81,11 +86,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  const hasSubscription = (tier: string): boolean => {
+    if (!user?.subscriptionTier) return false;
+    
+    const tiers = ['bronze', 'silver', 'gold'];
+    const userTierIndex = tiers.indexOf(user.subscriptionTier);
+    const requiredTierIndex = tiers.indexOf(tier);
+    
+    return userTierIndex >= requiredTierIndex;
+  };
+
+  const updateProfile = async (data: Partial<User>): Promise<void> => {
+    if (!user) throw new Error('No user logged in');
+    
+    setIsLoading(true);
+    try {
+      // Mock profile update
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUser({ ...user, ...data });
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     login,
     logout,
     isLoading,
+    isAuthenticated: !!user,
+    hasSubscription,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

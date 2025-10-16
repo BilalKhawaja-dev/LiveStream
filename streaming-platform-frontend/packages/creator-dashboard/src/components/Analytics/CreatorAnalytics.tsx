@@ -34,7 +34,7 @@ import {
   HeartIcon,
   ChatBubbleLeftIcon,
   UserGroupIcon,
-  CurrencyPoundSterlingIcon,
+  CurrencyDollarIcon,
   TrendingUpIcon,
   TrendingDownIcon,
   CalendarIcon,
@@ -426,7 +426,7 @@ export const CreatorAnalytics: React.FC = () => {
           <Card bg={bg} border="1px" borderColor={borderColor}>
             <CardHeader>
               <HStack>
-                <CurrencyPoundSterlingIcon width="20px" />
+                <CurrencyDollarIcon width="20px" />
                 <Text fontWeight="bold">Revenue Breakdown</Text>
               </HStack>
             </CardHeader>

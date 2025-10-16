@@ -939,7 +939,6 @@ resource "aws_cloudwatch_log_group" "backup_validator_logs" {
 
   name              = "/aws/lambda/${aws_lambda_function.backup_validator[0].function_name}"
   retention_in_days = var.log_retention_days
-  kms_key_id        = aws_kms_key.dynamodb.arn
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-dynamodb-backup-validator-logs"

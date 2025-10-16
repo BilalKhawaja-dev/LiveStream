@@ -123,7 +123,6 @@ resource "aws_iam_role_policy" "media_processor_cloudfront" {
 resource "aws_cloudwatch_log_group" "media_processor" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-media-processor"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -234,7 +233,6 @@ resource "aws_iam_role_policy" "presigned_url_generator_s3" {
 resource "aws_cloudwatch_log_group" "presigned_url_generator" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-presigned-url-generator"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }

@@ -294,8 +294,8 @@ resource "aws_cloudfront_distribution" "media_distribution" {
     minimum_protocol_version       = "TLSv1.2_2021"
   }
 
-  # Web Application Firewall
-  web_acl_id = var.waf_web_acl_arn
+  # Web Application Firewall - Disabled (regional WAF not compatible with CloudFront)
+  # web_acl_id = var.waf_web_acl_arn
 
   # Logging configuration (only if bucket is specified)
   dynamic "logging_config" {
@@ -415,7 +415,6 @@ resource "aws_s3_bucket_policy" "processed_media_policy" {
 resource "aws_cloudwatch_log_group" "media_processing" {
   name              = "/aws/media/${var.project_name}-${var.environment}"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }

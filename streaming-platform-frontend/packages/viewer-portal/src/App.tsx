@@ -1,8 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth, withAuth } from '../../shared/auth';
-import { LoginForm, RegisterForm } from '../../shared/auth';
-import './App.css';
+import { AuthProvider, useAuth, withAuth } from '@streaming/auth';
+import { LoginForm, RegisterForm } from '@streaming/auth';
+// import './App.css';
 
 // Environment configuration
 const cognitoConfig = {

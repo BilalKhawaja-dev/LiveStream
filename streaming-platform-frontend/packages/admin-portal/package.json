@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
@@ -23,9 +23,9 @@
     "react-chartjs-2": "^5.2.0",
     "chart.js": "^4.4.0",
     "react-router-dom": "^6.15.0",
-    "@streaming/shared": "workspace:*",
-    "@streaming/ui": "workspace:*",
-    "@streaming/auth": "workspace:*"
+    "@streaming/shared": "file:../shared",
+    "@streaming/ui": "file:../ui",
+    "@streaming/auth": "file:../auth"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

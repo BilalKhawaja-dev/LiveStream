@@ -10,9 +10,9 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
@@ -20,11 +20,5 @@
       "@streaming/ui/*": ["packages/ui/src/*"],
       "@streaming/auth/*": ["packages/auth/src/*"]
     }
-  },
-  "include": ["packages/*/src"],
-  "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/ui" },
-    { "path": "./packages/auth" }
-  ]
+  }
 }

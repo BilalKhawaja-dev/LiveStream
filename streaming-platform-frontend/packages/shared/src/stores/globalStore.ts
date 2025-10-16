@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { SharedContext, UserProfile, Notification, ApplicationType } from '../types';
+import { SharedContext, Notification, ApplicationType } from '../types';
 
 interface GlobalState extends SharedContext {
   // Actions
-  setUser: (user: Partial<UserProfile>) => void;
+  setUser: (user: Partial<SharedContext['user']>) => void;
   setCurrentApp: (app: ApplicationType, contextData?: Record<string, any>) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
   markNotificationRead: (id: string) => void;
@@ -45,7 +45,14 @@ export const useGlobalStore = create<GlobalState>()(
         // Actions
         setUser: (userData) =>
           set((state) => ({
-            user: { ...state.user, ...userData },
+            user: { 
+              ...state.user, 
+              ...userData,
+              // Ensure preferences are properly merged
+              preferences: userData.preferences 
+                ? { ...state.user.preferences, ...userData.preferences }
+                : state.user.preferences
+            },
           })),
 
         setCurrentApp: (app, contextData) =>

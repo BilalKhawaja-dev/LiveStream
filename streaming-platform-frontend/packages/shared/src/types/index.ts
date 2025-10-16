@@ -43,7 +43,11 @@ export interface SharedContext {
   user: {
     id: string;
     role: UserRole;
-    subscription: SubscriptionTier;
+    subscription: SubscriptionTier | {
+      tier: SubscriptionTier;
+      status: 'active' | 'cancelled' | 'expired';
+      renewalDate: Date;
+    };
     preferences: UserPreferences;
   };
   navigation: {

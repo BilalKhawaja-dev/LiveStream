@@ -363,43 +363,12 @@ resource "aws_wafv2_ip_set" "admin_ips" {
   tags = var.tags
 }
 
-# WAF Logging Configuration
-resource "aws_wafv2_web_acl_logging_configuration" "main" {
-  resource_arn            = aws_wafv2_web_acl.main.arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
-
-  redacted_fields {
-    single_header {
-      name = "authorization"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "cookie"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "x-api-key"
-    }
-  }
-
-  logging_filter {
-    default_behavior = "KEEP"
-
-    filter {
-      behavior = "DROP"
-      condition {
-        action_condition {
-          action = "ALLOW"
-        }
-      }
-      requirement = "MEETS_ALL"
-    }
-  }
-}
+# WAF Logging Configuration - Disabled for now
+# WAF logging requires Kinesis Data Firehose, not CloudWatch logs directly
+# resource "aws_wafv2_web_acl_logging_configuration" "main" {
+#   resource_arn            = aws_wafv2_web_acl.main.arn
+#   log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
+# }
 
 # CloudWatch Alarms for WAF
 resource "aws_cloudwatch_metric_alarm" "waf_blocked_requests" {

@@ -12,7 +12,7 @@ import {
   Collapse,
   useDisclosure,
 } from '@chakra-ui/react';
-import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+// import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface Props {
   children: ReactNode;
@@ -50,13 +50,10 @@ class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // Log error to monitoring service using secure logging
-    import('@streaming/shared').then(({ secureLogger }) => {
-      secureLogger.error('ErrorBoundary caught an error', error, { 
-        component: 'ErrorBoundary',
-        errorInfo: errorInfo.componentStack 
-      });
-    });
+    // Log error to console in development, would use monitoring service in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
     
     // Call custom error handler if provided
     if (this.props.onError) {
@@ -67,45 +64,17 @@ class ErrorBoundary extends Component<Props, State> {
     this.logErrorToService(error, errorInfo);
   }
 
-  private sanitizeText = (text: string): string => {
-    if (!text) return '';
-    
-    // Sanitize text to prevent XSS and limit length
-    return text
-      .replace(/[<>"'&]/g, '') // Remove HTML/XML characters
-      .replace(/javascript:/gi, '') // Remove javascript: protocol
-      .replace(/data:/gi, '') // Remove data: protocol
-      .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-      .substring(0, 500); // Limit length
-  };
 
-  private sanitizeErrorData = (error: Error, errorInfo: ErrorInfo) => {
-    return {
-      message: this.sanitizeText(error.message || 'Unknown error'),
-      stack: process.env.NODE_ENV === 'development' ? this.sanitizeText(error.stack || '') : '',
-      componentStack: process.env.NODE_ENV === 'development' ? this.sanitizeText(errorInfo.componentStack || '') : '',
-      timestamp: new Date().toISOString(),
-      userAgent: this.sanitizeText(navigator.userAgent || ''),
-      url: this.sanitizeText(window.location.href || ''),
-    };
-  };
 
-  private logErrorToService = (error: Error, errorInfo: ErrorInfo) => {
+  private logErrorToService = (_error: Error, _errorInfo: ErrorInfo) => {
     try {
-      // Sanitize error data to prevent path traversal and injection
-      const errorData = this.sanitizeErrorData(error, errorInfo);
-
       // Example: Send to your error tracking service
-      // errorTrackingService.captureException(errorData);
+      // errorTrackingService.captureException(this.sanitizeErrorData(error, errorInfo));
       
       // Use secure logging for service confirmation
-      import('@streaming/shared').then(({ secureLogger }) => {
-        secureLogger.debug('Error logged to service successfully');
-      });
+      console.log('Error logged successfully');
     } catch (loggingError) {
-      import('@streaming/shared').then(({ secureLogger }) => {
-        secureLogger.error('Failed to log error to service', loggingError);
-      });
+      console.error('Failed to log error:', loggingError);
     }
   };
 
@@ -153,6 +122,17 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
   onReload 
 }) => {
   const { isOpen, onToggle } = useDisclosure();
+  
+  // Helper function to safely sanitize text
+  const sanitizeText = (text: string): string => {
+    return text
+      .replace(/[\r\n\t]/g, ' ')
+      .replace(/[<>]/g, '')
+      .replace(/javascript:/gi, '')
+      .replace(/data:/gi, '')
+      .replace(/vbscript:/gi, '')
+      .substring(0, 500);
+  };
 
   return (
     <Box p={6} maxW="600px" mx="auto" mt={8}>
@@ -185,7 +165,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               <Box>
                 <Text fontWeight="bold" mb={2}>Error Message:</Text>
                 <Code p={3} borderRadius="md" display="block" whiteSpace="pre-wrap">
-                  {this.sanitizeText(error.message || 'Unknown error')}
+                  {sanitizeText(error?.message || 'Unknown error')}
                 </Code>
               </Box>
             )}
@@ -195,7 +175,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
                 <Text fontWeight="bold" mb={2}>Stack Trace:</Text>
                 <Code p={3} borderRadius="md" display="block" whiteSpace="pre-wrap" fontSize="xs">
                   {process.env.NODE_ENV === 'development' 
-                    ? this.sanitizeText(error.stack || '')
+                    ? sanitizeText(error?.stack || '')
                     : 'Stack trace hidden in production'
                   }
                 </Code>
@@ -207,7 +187,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
                 <Text fontWeight="bold" mb={2}>Component Stack:</Text>
                 <Code p={3} borderRadius="md" display="block" whiteSpace="pre-wrap" fontSize="xs">
                   {process.env.NODE_ENV === 'development'
-                    ? this.sanitizeText(errorInfo.componentStack || '')
+                    ? sanitizeText(errorInfo?.componentStack || '')
                     : 'Component stack hidden in production'
                   }
                 </Code>

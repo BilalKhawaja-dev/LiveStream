@@ -16,7 +16,7 @@ variable "environment" {
 variable "engine_version" {
   description = "Aurora MySQL engine version"
   type        = string
-  default     = "8.0.mysql_aurora.3.02.0"
+  default     = "8.0.mysql_aurora.3.08.2"
 }
 
 variable "database_name" {

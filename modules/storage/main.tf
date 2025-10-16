@@ -224,12 +224,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "streaming_logs" {
 
     # Noncurrent version management
     noncurrent_version_transition {
-      noncurrent_days = 1
+      noncurrent_days = 30
       storage_class   = "STANDARD_IA"
     }
 
     noncurrent_version_transition {
-      noncurrent_days = 7
+      noncurrent_days = 60
       storage_class   = "GLACIER"
     }
 
@@ -276,12 +276,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "error_logs" {
 
     # Noncurrent version management
     noncurrent_version_transition {
-      noncurrent_days = 1
+      noncurrent_days = 30
       storage_class   = "STANDARD_IA"
     }
 
     noncurrent_version_transition {
-      noncurrent_days = 7
+      noncurrent_days = 60
       storage_class   = "GLACIER"
     }
 
@@ -328,12 +328,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
 
     # Noncurrent version management
     noncurrent_version_transition {
-      noncurrent_days = 1
+      noncurrent_days = 30
       storage_class   = "STANDARD_IA"
     }
 
     noncurrent_version_transition {
-      noncurrent_days = 7
+      noncurrent_days = 60
       storage_class   = "GLACIER"
     }
 

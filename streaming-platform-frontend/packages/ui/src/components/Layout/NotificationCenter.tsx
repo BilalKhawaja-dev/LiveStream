@@ -17,7 +17,35 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { FiX, FiExternalLink } from 'react-icons/fi';
-import { useGlobalStore, formatRelativeTime } from '@streaming/shared';
+// Temporary types and utilities until shared package is properly integrated
+interface Notification {
+  id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  timestamp: Date;
+  read: boolean;
+  actionUrl?: string;
+}
+
+const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+// Mock store for now
+const useGlobalStore = () => ({
+  notifications: [] as Notification[],
+  markNotificationRead: (_id: string) => {},
+  clearNotifications: () => {},
+  navigateWithContext: (_app: string, _context?: any) => {},
+});
 
 interface NotificationCenterProps {
   children: React.ReactElement;
@@ -36,8 +64,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const bg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   
-  const unreadNotifications = notifications.filter(n => !n.read);
-  const readNotifications = notifications.filter(n => n.read);
+  const unreadNotifications = notifications.filter((n: Notification) => !n.read);
+  const readNotifications = notifications.filter((n: Notification) => n.read);
 
   const handleNotificationClick = (notification: any) => {
     markNotificationRead(notification.id);
@@ -107,7 +135,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               {/* Unread notifications */}
               {unreadNotifications.length > 0 && (
                 <>
-                  {unreadNotifications.map((notification) => (
+                  {unreadNotifications.map((notification: Notification) => (
                     <Box
                       key={notification.id}
                       p={3}
@@ -169,7 +197,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               )}
               
               {/* Read notifications */}
-              {readNotifications.slice(0, 5).map((notification) => (
+              {readNotifications.slice(0, 5).map((notification: Notification) => (
                 <Box
                   key={notification.id}
                   p={3}

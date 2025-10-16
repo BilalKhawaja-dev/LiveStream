@@ -62,6 +62,13 @@ module "storage" {
   project_name = var.project_name
   environment  = var.environment
 
+  # Lifecycle configuration
+  hot_tier_days                      = var.s3_lifecycle_hot_days
+  warm_tier_days                     = var.s3_lifecycle_warm_days
+  cold_tier_days                     = var.s3_lifecycle_cold_days
+  athena_results_retention_days      = var.athena_results_retention_days
+  noncurrent_version_expiration_days = 90
+
   tags = local.common_tags
 }
 

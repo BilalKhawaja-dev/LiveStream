@@ -8,6 +8,8 @@ interface LogContext {
   component?: string;
   action?: string;
   timestamp?: string;
+  providedValue?: any;
+  key?: string;
 }
 
 class SecureLogger {

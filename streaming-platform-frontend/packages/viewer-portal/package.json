@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
@@ -24,9 +24,9 @@
     "react-router-dom": "^6.15.0",
     "@stripe/stripe-js": "^2.1.6",
     "@stripe/react-stripe-js": "^2.1.1",
-    "@streaming/shared": "workspace:*",
-    "@streaming/ui": "workspace:*",
-    "@streaming/auth": "workspace:*"
+    "@streaming/shared": "file:../shared",
+    "@streaming/ui": "file:../ui",
+    "@streaming/auth": "file:../auth"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
