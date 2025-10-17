@@ -25,10 +25,19 @@ resource "aws_kms_alias" "aurora" {
   target_key_id = aws_kms_key.aurora.key_id
 }
 
-# DB subnet group for Aurora
+# Random suffix to avoid naming conflicts
+resource "random_id" "aurora_suffix" {
+  byte_length = 4
+}
+
+# DB subnet group for Aurora with unique naming
 resource "aws_db_subnet_group" "aurora" {
-  name       = "${var.project_name}-${var.environment}-aurora-subnet-group"
+  name       = "${var.project_name}-${var.environment}-aurora-subnet-group-${random_id.aurora_suffix.hex}"
   subnet_ids = var.database_subnet_ids
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-aurora-subnet-group"
@@ -42,14 +51,20 @@ resource "aws_db_subnet_group" "aurora" {
 resource "random_password" "aurora_master" {
   length  = 16
   special = true
+  # Exclude characters that Aurora doesn't allow: /, @, ", and space
+  override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
 # Store Aurora master password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "aurora_master" {
-  name                    = "${var.project_name}-${var.environment}-aurora-master-password"
+  name                    = "${var.project_name}-${var.environment}-aurora-master-password-${random_id.aurora_suffix.hex}"
   description             = "Aurora master user password"
   recovery_window_in_days = var.environment == "prod" ? 30 : 0
   kms_key_id              = aws_kms_key.aurora.arn
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-aurora-master-password"
@@ -67,9 +82,11 @@ resource "aws_secretsmanager_secret_version" "aurora_master" {
   })
 }
 
+# Check if Aurora cluster exists
 # Aurora Serverless v2 cluster
 resource "aws_rds_cluster" "aurora" {
-  cluster_identifier = "${var.project_name}-${var.environment}-aurora-cluster"
+
+  cluster_identifier = "${var.project_name}-${var.environment}-aurora-cluster-${random_id.aurora_suffix.hex}"
   engine             = "aurora-mysql"
   engine_version     = var.engine_version
   engine_mode        = "provisioned"
@@ -79,6 +96,11 @@ resource "aws_rds_cluster" "aurora" {
 
   lifecycle {
     create_before_destroy = false
+    ignore_changes = [
+      # Ignore changes to these attributes to prevent unnecessary updates
+      master_password,
+      final_snapshot_identifier
+    ]
   }
 
   # Backup configuration
@@ -117,7 +139,7 @@ resource "aws_rds_cluster" "aurora" {
   # Deletion protection
   deletion_protection       = var.deletion_protection
   skip_final_snapshot       = var.environment != "prod"
-  final_snapshot_identifier = var.environment == "prod" ? "${var.project_name}-${var.environment}-aurora-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}" : null
+  final_snapshot_identifier = var.environment == "prod" ? "${var.project_name}-${var.environment}-aurora-final-snapshot" : null
 
   # Apply changes immediately in development
   apply_immediately = var.environment != "prod"
@@ -134,11 +156,17 @@ resource "aws_rds_cluster" "aurora" {
   ]
 }
 
+# Local value to reference the cluster
+locals {
+  cluster_id       = aws_rds_cluster.aurora.cluster_identifier
+  cluster_endpoint = aws_rds_cluster.aurora.endpoint
+}
+
 # Aurora Serverless v2 cluster instances
 resource "aws_rds_cluster_instance" "aurora_instances" {
   count              = var.instance_count
   identifier         = "${var.project_name}-${var.environment}-aurora-instance-${count.index + 1}"
-  cluster_identifier = aws_rds_cluster.aurora.id
+  cluster_identifier = local.cluster_id
   instance_class     = "db.serverless"
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
@@ -178,6 +206,10 @@ resource "aws_cloudwatch_log_group" "aurora_logs" {
 
   name              = "/aws/rds/cluster/${var.project_name}-${var.environment}-aurora-cluster/${each.value}"
   retention_in_days = var.log_retention_days
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-aurora-${each.value}-logs"
@@ -291,7 +323,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_database_connections" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    DBClusterIdentifier = aws_rds_cluster.aurora.id
+    DBClusterIdentifier = local.cluster_id
   }
 
   tags = {
@@ -349,7 +381,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_serverless_acu_utilization" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    DBClusterIdentifier = aws_rds_cluster.aurora.id
+    DBClusterIdentifier = local.cluster_id
   }
 
   tags = {
@@ -378,7 +410,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_backup_failure" {
   datapoints_to_alarm = 1
 
   dimensions = {
-    DBClusterIdentifier = aws_rds_cluster.aurora.id
+    DBClusterIdentifier = local.cluster_id
   }
 
   tags = {
@@ -490,8 +522,8 @@ resource "aws_lambda_function" "db_init" {
 
   environment {
     variables = {
-      DB_HOST    = aws_rds_cluster.aurora.endpoint
-      DB_PORT    = aws_rds_cluster.aurora.port
+      DB_HOST    = local.cluster_endpoint
+      DB_PORT    = "3306"
       DB_NAME    = var.database_name
       SECRET_ARN = aws_secretsmanager_secret.aurora_master.arn
     }

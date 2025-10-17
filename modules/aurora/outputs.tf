@@ -3,7 +3,7 @@
 # Cluster information
 output "cluster_id" {
   description = "Aurora cluster identifier"
-  value       = aws_rds_cluster.aurora.id
+  value       = local.cluster_id
 }
 
 output "cluster_arn" {
@@ -13,7 +13,7 @@ output "cluster_arn" {
 
 output "cluster_endpoint" {
   description = "Aurora cluster writer endpoint"
-  value       = aws_rds_cluster.aurora.endpoint
+  value       = local.cluster_endpoint
 }
 
 output "cluster_reader_endpoint" {
@@ -106,7 +106,7 @@ output "serverless_max_capacity" {
 output "connection_info" {
   description = "Aurora connection information"
   value = {
-    endpoint   = aws_rds_cluster.aurora.endpoint
+    endpoint   = local.cluster_endpoint
     port       = aws_rds_cluster.aurora.port
     database   = aws_rds_cluster.aurora.database_name
     username   = aws_rds_cluster.aurora.master_username

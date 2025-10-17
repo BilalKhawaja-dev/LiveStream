@@ -12,6 +12,8 @@ variable "environment" {
   default     = "dev"
 }
 
+
+
 # Aurora cluster configuration
 variable "engine_version" {
   description = "Aurora MySQL engine version"

@@ -74,17 +74,19 @@ module "storage" {
 
 # Aurora Module - Database
 module "aurora" {
+  count  = var.enable_aurora ? 1 : 0
   source = "./modules/aurora"
 
   project_name = var.project_name
   environment  = var.environment
 
   # VPC Configuration
-  vpc_id                   = module.vpc.vpc_id
-  database_subnet_ids      = module.vpc.database_subnet_ids
-  aurora_security_group_id = module.vpc.aurora_security_group_id
-  aurora_subnet_group_name = module.vpc.aurora_subnet_group_name
-  availability_zones       = var.availability_zones
+  vpc_id                     = module.vpc.vpc_id
+  database_subnet_ids        = module.vpc.database_subnet_ids
+  aurora_security_group_id   = module.vpc.aurora_security_group_id
+  aurora_subnet_group_name   = module.vpc.aurora_subnet_group_name
+  availability_zones         = var.availability_zones
+
 
   # Serverless v2 scaling configuration
   min_capacity = var.aurora_min_capacity
@@ -115,6 +117,32 @@ module "auth" {
   domain_name  = var.domain_name
 
   tags = local.common_tags
+}
+
+# ECR Module - Container registry
+module "ecr" {
+  count  = var.enable_ecs ? 1 : 0
+  source = "./modules/ecr"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # Repository configuration
+  image_tag_mutability = var.ecr_image_tag_mutability
+  scan_on_push         = var.ecr_scan_on_push
+  encryption_type      = var.ecr_encryption_type
+  kms_key_arn          = var.ecr_encryption_type == "KMS" ? module.storage.kms_key_arn : null
+
+  # Lifecycle configuration
+  max_image_count     = var.ecr_max_image_count
+  untagged_image_days = var.ecr_untagged_image_days
+
+  # Cross-account access
+  allowed_account_ids = var.ecr_allowed_account_ids
+
+  tags = local.common_tags
+
+  depends_on = [module.storage]
 }
 
 # WAF Module - Web Application Firewall
@@ -183,14 +211,80 @@ module "alb" {
   vpc_id            = module.vpc.vpc_id
   vpc_cidr          = var.vpc_cidr
   public_subnet_ids = module.vpc.public_subnet_ids
-  certificate_arn   = var.ssl_certificate_arn != "" ? var.ssl_certificate_arn : (var.domain_name != "" ? module.acm.certificate_arn : "")
+  certificate_arn   = var.ssl_certificate_arn != "" ? var.ssl_certificate_arn : (var.domain_name != "" ? module.acm.certificate_arn : null)
+
+  # Frontend applications configuration matching ECS services
+  frontend_applications = {
+    viewer-portal = {
+      port              = 3000
+      priority          = 10
+      health_check_path = "/health"
+    }
+    creator-dashboard = {
+      port              = 3001
+      priority          = 20
+      health_check_path = "/health"
+    }
+    admin-portal = {
+      port              = 3002
+      priority          = 30
+      health_check_path = "/health"
+    }
+    support-system = {
+      port              = 3003
+      priority          = 40
+      health_check_path = "/health"
+    }
+    analytics-dashboard = {
+      port              = 3004
+      priority          = 50
+      health_check_path = "/health"
+    }
+    developer-console = {
+      port              = 3005
+      priority          = 60
+      health_check_path = "/health"
+    }
+  }
+
+  # ALB Configuration
+  enable_deletion_protection = var.environment == "prod" ? true : false
+  idle_timeout               = 60
+
+  # Access Logs (disabled temporarily to avoid S3 permission issues)
+  enable_access_logs = false
+  access_logs_bucket = null
+
+  # CloudWatch Logs
+  enable_cloudwatch_logs = var.enable_enhanced_monitoring
+  log_retention_days     = var.log_retention_days
+  kms_key_arn            = module.storage.kms_key_arn
+
+  # Health Check Configuration
+  health_check_healthy_threshold   = 2
+  health_check_unhealthy_threshold = 3
+  health_check_timeout             = 5
+  health_check_interval            = 30
+
+  # Target Group Configuration
+  enable_stickiness        = false
+  deregistration_delay     = 300
+  slow_start_duration      = 0
+  load_balancing_algorithm = "round_robin"
+
+  # Monitoring Configuration
+  enable_cloudwatch_alarms = var.enable_enhanced_monitoring
+  sns_topic_arns           = [] # Will be configured later with SNS module
+  response_time_threshold  = 2.0
+  unhealthy_host_threshold = 1
+  http_5xx_threshold       = 10
 
   # Security configuration
   waf_web_acl_arn = var.enable_waf ? module.waf[0].web_acl_arn : null
 
   tags = local.common_tags
 
-  depends_on = [module.vpc, module.waf]
+  depends_on = [module.vpc, module.waf, module.storage]
 }
 
 # Media Services Module - S3 storage and CloudFront CDN
@@ -243,4 +337,56 @@ module "media_services" {
   tags = local.common_tags
 
   depends_on = [module.waf, module.acm, module.storage]
+}
+# ECS Module - Container orchestration
+module "ecs" {
+  count  = var.enable_ecs ? 1 : 0
+  source = "./modules/ecs"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # VPC Configuration
+  vpc_id                = module.vpc.vpc_id
+  vpc_cidr              = var.vpc_cidr
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  alb_security_group_id = var.enable_ecs ? module.alb[0].alb_security_group_id : ""
+
+  # ECR Configuration
+  ecr_repository_url = var.enable_ecs ? module.ecr[0].repository_url : ""
+  image_tag          = var.ecs_image_tag
+
+  # Target Groups from ALB
+  target_group_arns = var.enable_ecs ? module.alb[0].target_group_arns : {}
+
+  # Service Configuration
+  min_capacity = var.ecs_min_capacity
+  max_capacity = var.ecs_max_capacity
+
+  # Auto Scaling Configuration
+  cpu_target_value    = var.ecs_cpu_target_value
+  memory_target_value = var.ecs_memory_target_value
+  scale_in_cooldown   = var.ecs_scale_in_cooldown
+  scale_out_cooldown  = var.ecs_scale_out_cooldown
+
+  # Fargate Configuration
+  fargate_base_capacity      = var.ecs_fargate_base_capacity
+  fargate_weight             = var.ecs_fargate_weight
+  fargate_spot_base_capacity = var.ecs_fargate_spot_base_capacity
+  fargate_spot_weight        = var.ecs_fargate_spot_weight
+
+  # Application Configuration
+  api_base_url                = var.api_base_url
+  cognito_user_pool_id        = module.auth.user_pool_id
+  cognito_user_pool_client_id = module.auth.user_pool_client_id
+
+  # Security and Monitoring
+  kms_key_arn               = module.storage.kms_key_arn
+  enable_container_insights = var.ecs_enable_container_insights
+  enable_ecs_exec           = var.ecs_enable_exec
+  log_retention_days        = var.log_retention_days
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc, module.alb, module.ecr, module.auth, module.storage]
 }

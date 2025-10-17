@@ -783,9 +783,53 @@ variable "ecs_scheduled_scaling_enabled" {
 
 # Container Configuration
 variable "ecr_repository_url" {
-  description = "ECR repository URL for container images"
+  description = "ECR repository URL for container images (deprecated - now created by ECR module)"
   type        = string
-  default     = "" # Must be provided when ECS is enabled
+  default     = ""
+}
+
+variable "ecr_image_tag_mutability" {
+  description = "The tag mutability setting for the ECR repository"
+  type        = string
+  default     = "MUTABLE"
+  validation {
+    condition     = contains(["MUTABLE", "IMMUTABLE"], var.ecr_image_tag_mutability)
+    error_message = "Image tag mutability must be either MUTABLE or IMMUTABLE."
+  }
+}
+
+variable "ecr_scan_on_push" {
+  description = "Indicates whether images are scanned after being pushed to the ECR repository"
+  type        = bool
+  default     = true
+}
+
+variable "ecr_encryption_type" {
+  description = "The encryption type to use for the ECR repository"
+  type        = string
+  default     = "AES256"
+  validation {
+    condition     = contains(["AES256", "KMS"], var.ecr_encryption_type)
+    error_message = "Encryption type must be either AES256 or KMS."
+  }
+}
+
+variable "ecr_max_image_count" {
+  description = "Maximum number of images to keep in the ECR repository"
+  type        = number
+  default     = 10
+}
+
+variable "ecr_untagged_image_days" {
+  description = "Number of days to keep untagged images in ECR"
+  type        = number
+  default     = 7
+}
+
+variable "ecr_allowed_account_ids" {
+  description = "List of AWS account IDs that are allowed to access the ECR repository"
+  type        = list(string)
+  default     = []
 }
 
 variable "container_image_tag" {
@@ -1067,8 +1111,6 @@ variable "waf_rate_limit_alarm_threshold" {
   default     = 50
 }
 
-# Duplicate variable removed - already defined above
-
 variable "enable_cdn" {
   description = "Enable CloudFront CDN"
   type        = bool
@@ -1201,4 +1243,17 @@ variable "aurora_preferred_maintenance_window" {
   description = "Preferred maintenance window for Aurora cluster"
   type        = string
   default     = "sun:04:00-sun:05:00"
+}
+
+# ECS Configuration
+variable "ecs_image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "api_base_url" {
+  description = "Base URL for API endpoints"
+  type        = string
+  default     = ""
 }

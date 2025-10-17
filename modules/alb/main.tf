@@ -5,6 +5,18 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+# Local values for shortened names
+locals {
+  app_short_names = {
+    "viewer-portal"       = "viewer"
+    "creator-dashboard"   = "creator"
+    "admin-portal"        = "admin"
+    "support-system"      = "support"
+    "analytics-dashboard" = "analytics"
+    "developer-console"   = "dev"
+  }
+}
+
 # Security Group for ALB
 resource "aws_security_group" "alb_sg" {
   name_prefix = "${var.project_name}-${var.environment}-alb-"
@@ -58,7 +70,7 @@ resource "aws_security_group" "alb_sg" {
 
 # Application Load Balancer
 resource "aws_lb" "frontend_alb" {
-  name               = "${var.project_name}-${var.environment}-frontend-alb"
+  name               = "${var.project_name}-${var.environment}-fe-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
@@ -73,15 +85,18 @@ resource "aws_lb" "frontend_alb" {
   drop_invalid_header_fields = true
   enable_waf_fail_open       = false
 
-  # Access logs
-  access_logs {
-    bucket  = var.access_logs_bucket
-    prefix  = "alb-logs"
-    enabled = var.enable_access_logs
+  # Access logs (only if enabled and bucket provided)
+  dynamic "access_logs" {
+    for_each = var.enable_access_logs && var.access_logs_bucket != null ? [1] : []
+    content {
+      bucket  = var.access_logs_bucket
+      prefix  = "alb-logs"
+      enabled = true
+    }
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-${var.environment}-frontend-alb"
+    Name = "${var.project_name}-${var.environment}-fe-alb"
   })
 }
 
@@ -89,7 +104,7 @@ resource "aws_lb" "frontend_alb" {
 resource "aws_lb_target_group" "frontend_apps" {
   for_each = var.frontend_applications
 
-  name     = "${var.project_name}-${var.environment}-${each.key}-tg"
+  name     = "${var.project_name}-${var.environment}-${local.app_short_names[each.key]}-tg"
   port     = each.value.port
   protocol = "HTTP"
   vpc_id   = var.vpc_id
@@ -119,7 +134,6 @@ resource "aws_lb_target_group" "frontend_apps" {
   deregistration_delay          = var.deregistration_delay
   slow_start                    = var.slow_start_duration
   load_balancing_algorithm_type = var.load_balancing_algorithm
-  preserve_client_ip            = true
   proxy_protocol_v2             = false
 
   tags = merge(var.tags, {
@@ -443,7 +457,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_http_5xx_errors" {
 
 # WAF Web ACL Association (optional)
 resource "aws_wafv2_web_acl_association" "alb_waf" {
-  count = var.waf_web_acl_arn != null ? 1 : 0
+  count = var.waf_web_acl_arn != null && var.waf_web_acl_arn != "" ? 1 : 0
 
   resource_arn = aws_lb.frontend_alb.arn
   web_acl_arn  = var.waf_web_acl_arn

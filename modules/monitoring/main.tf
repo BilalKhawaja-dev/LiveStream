@@ -1,6 +1,11 @@
 # Monitoring Module for CloudWatch Dashboards
 # Requirements: 4.8, 5.6, 5.8
 
+locals {
+  # Use static time period start to avoid infinite plan loops
+  budget_time_period_start = "2024-01-01_00:00"
+}
+
 # Data sources
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
@@ -511,7 +516,7 @@ resource "aws_budgets_budget" "project_budget" {
   limit_amount      = var.monthly_budget_limit
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
-  time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
+  time_period_start = local.budget_time_period_start
 
   cost_filter {
     name   = "TagKey"
@@ -567,7 +572,7 @@ resource "aws_budgets_budget" "s3_budget" {
   limit_amount      = var.s3_budget_limit
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
-  time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
+  time_period_start = local.budget_time_period_start
 
   cost_filter {
     name   = "Service"
@@ -609,7 +614,7 @@ resource "aws_budgets_budget" "rds_budget" {
   limit_amount      = var.rds_budget_limit
   limit_unit        = "USD"
   time_unit         = "MONTHLY"
-  time_period_start = formatdate("YYYY-MM-01_00:00", timestamp())
+  time_period_start = local.budget_time_period_start
 
   cost_filter {
     name   = "Service"

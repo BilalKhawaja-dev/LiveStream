@@ -11,11 +11,12 @@ resource "aws_ecs_cluster" "main" {
 
   configuration {
     execute_command_configuration {
-      kms_key_id = var.kms_key_arn
+      # KMS encryption disabled for development to avoid permission issues
+      # kms_key_id = var.kms_key_arn
       logging    = "OVERRIDE"
 
       log_configuration {
-        cloud_watch_encryption_enabled = true
+        cloud_watch_encryption_enabled = false
         cloud_watch_log_group_name     = aws_cloudwatch_log_group.ecs_exec.name
       }
     }
@@ -61,7 +62,8 @@ resource "aws_service_discovery_private_dns_namespace" "main" {
 resource "aws_cloudwatch_log_group" "ecs_exec" {
   name              = "/aws/ecs/${var.project_name}-${var.environment}/exec"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # KMS encryption disabled for development to avoid permission issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -273,7 +275,8 @@ resource "aws_cloudwatch_log_group" "services" {
 
   name              = "/aws/ecs/${var.project_name}-${var.environment}/${each.key}"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # KMS encryption disabled for development to avoid permission issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -295,7 +298,9 @@ resource "aws_service_discovery_service" "services" {
     routing_policy = "MULTIVALUE"
   }
 
-  health_check_grace_period_seconds = 30
+  health_check_custom_config {
+    failure_threshold = 1
+  }
 
   tags = var.tags
 }
@@ -315,7 +320,7 @@ resource "aws_ecs_task_definition" "services" {
   container_definitions = jsonencode([
     {
       name  = each.key
-      image = "${var.ecr_repository_url}/${each.key}:${var.image_tag}"
+      image = "${var.ecr_repository_url}:${each.key}-${var.image_tag}"
 
       portMappings = [
         {
@@ -359,7 +364,7 @@ resource "aws_ecs_task_definition" "services" {
       healthCheck = {
         command = [
           "CMD-SHELL",
-          "curl -f http://localhost:${each.value.port}${each.value.health_check_path} || exit 1"
+          "wget --no-verbose --tries=1 --spider http://localhost:${each.value.port}${each.value.health_check_path} || exit 1"
         ]
         interval    = 30
         timeout     = 5
@@ -370,6 +375,10 @@ resource "aws_ecs_task_definition" "services" {
       essential = true
     }
   ])
+
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 
   tags = var.tags
 }
@@ -405,14 +414,12 @@ resource "aws_ecs_service" "services" {
     registry_arn = aws_service_discovery_service.services[each.key].arn
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 50
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 50
 
-    deployment_circuit_breaker {
-      enable   = true
-      rollback = true
-    }
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
   }
 
   # Enable execute command for debugging

@@ -5,7 +5,7 @@
 # Basic Configuration
 aws_region   = "eu-west-2"
 environment  = "dev"
-project_name = "streaming-logs"
+project_name = "streaming-app-v2"
 
 # Logging Configuration - Development Optimized
 log_retention_days      = 7    # Short retention for cost savings

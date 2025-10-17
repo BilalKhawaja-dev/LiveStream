@@ -30,23 +30,23 @@ output "alb_dns_name" {
 
 output "application_url" {
   description = "URL to access the application"
-  value = var.enable_ecs ? (
+  value = var.enable_ecs && length(module.alb) > 0 && module.alb[0].alb_dns_name != null ? (
     var.domain_name != "" ?
     "https://${var.domain_name}" :
     "http://${module.alb[0].alb_dns_name}"
-  ) : null
+  ) : "ALB not yet created - run terraform apply to create infrastructure"
 }
 
 # Database Information
 output "aurora_cluster_endpoint" {
   description = "Aurora cluster endpoint"
-  value       = module.aurora.cluster_endpoint
+  value       = var.enable_aurora ? module.aurora[0].cluster_endpoint : null
   sensitive   = true
 }
 
 output "aurora_cluster_id" {
   description = "Aurora cluster identifier"
-  value       = module.aurora.cluster_id
+  value       = var.enable_aurora ? module.aurora[0].cluster_id : null
 }
 
 # Authentication
@@ -112,4 +112,26 @@ output "deployment_info" {
       "5. Configure DNS if using custom domain"
     ]
   }
+}
+
+# ECR Repository URL
+output "ecr_repository_url" {
+  description = "URL of the ECR repository for container images"
+  value       = var.enable_ecs ? module.ecr[0].repository_url : null
+}
+
+# ECS Cluster Information
+output "ecs_cluster_name" {
+  description = "Name of the ECS cluster"
+  value       = var.enable_ecs ? module.ecs[0].cluster_name : null
+}
+
+output "ecs_cluster_arn" {
+  description = "ARN of the ECS cluster"
+  value       = var.enable_ecs ? module.ecs[0].cluster_arn : null
+}
+
+output "ecs_service_names" {
+  description = "List of ECS service names"
+  value       = var.enable_ecs ? module.ecs[0].ecs_service_names : []
 }
