@@ -18,7 +18,7 @@ resource "aws_lambda_layer_version" "shared_dependencies" {
 # Create shared dependencies layer
 data "archive_file" "shared_dependencies_layer" {
   type        = "zip"
-  source_dir  = "${path.module}/layers/python"
+  source_dir  = "${path.module}/layers/python_layer"
   output_path = "${path.module}/layers/shared-dependencies.zip"
 }
 

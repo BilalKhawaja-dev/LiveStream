@@ -2,463 +2,342 @@ import json
 import boto3
 import os
 import logging
-import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
 
 # Configure logging
 logger = logging.getLogger()
-logger.setLevel(getattr(logging, os.environ.get('LOG_LEVEL', 'INFO')))
+logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
-rds_client = boto3.client('rds-data')
-dynamodb = boto3.resource('dynamodb')
 medialive_client = boto3.client('medialive')
 s3_client = boto3.client('s3')
-cloudfront_client = boto3.client('cloudfront')
-secrets_client = boto3.client('secretsmanager')
 
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def lambda_handler(event, context):
     """
-    Streaming management handler for live streaming platform
-    Handles stream creation, management, and analytics
+    Handle streaming requests
     """
-    
     try:
-        # Parse the request
+        logger.info(f"Received event: {json.dumps(event)}")
+        
+        # Extract HTTP method and path
         http_method = event.get('httpMethod', '')
         path = event.get('path', '')
-        body = json.loads(event.get('body', '{}')) if event.get('body') else {}
-        query_params = event.get('queryStringParameters') or {}
         
-        logger.info(f"Processing {http_method} request to {path}")
+        # Parse request body
+        body = {}
+        if event.get('body'):
+            try:
+                body = json.loads(event['body'])
+            except json.JSONDecodeError:
+                return create_response(400, {'error': 'Invalid JSON in request body'})
         
-        # Route to appropriate handler
-        if path.endswith('/streams') and http_method == 'POST':
-            return handle_create_stream(body)
-        elif path.endswith('/streams') and http_method == 'GET':
-            return handle_list_streams(query_params)
-        elif '/streams/' in path and http_method == 'GET':
-            stream_id = path.split('/streams/')[-1]
-            return handle_get_stream(stream_id)
-        elif '/streams/' in path and http_method == 'PUT':
-            stream_id = path.split('/streams/')[-1]
-            return handle_update_stream(stream_id, body)
-        elif '/streams/' in path and http_method == 'DELETE':
-            stream_id = path.split('/streams/')[-1]
-            return handle_delete_stream(stream_id)
-        elif path.endswith('/live') and http_method == 'POST':
+        # Route based on path and method
+        if path == '/streams' and http_method == 'GET':
+            return handle_list_streams()
+        elif path == '/streams' and http_method == 'POST':
             return handle_start_stream(body)
-        elif path.endswith('/live') and http_method == 'DELETE':
+        elif path == '/streams/live' and http_method == 'GET':
+            return handle_live_streams()
+        elif path == '/streams/archive' and http_method == 'GET':
+            return handle_archived_streams()
+        elif path == '/streams/schedule' and http_method == 'GET':
+            return handle_stream_schedule()
+        elif path == '/streams/metrics' and http_method == 'GET':
+            return handle_stream_metrics(event.get('queryStringParameters', {}))
+        elif path == '/media' and http_method == 'GET':
+            return handle_get_media()
+        elif path == '/media/upload' and http_method == 'POST':
+            return handle_upload_media(body)
+        elif path == '/media/transcode' and http_method == 'POST':
+            return handle_transcode_media(body)
+        elif path == '/media/cdn' and http_method == 'GET':
+            return handle_cdn_media()
+        elif path == '/streaming/start' and http_method == 'POST':
+            return handle_start_stream(body)
+        elif path == '/streaming/stop' and http_method == 'POST':
             return handle_stop_stream(body)
-        elif path.endswith('/metrics') and http_method == 'GET':
-            return handle_get_metrics(query_params)
+        elif path == '/streaming/status' and http_method == 'GET':
+            return handle_stream_status(event.get('queryStringParameters', {}))
+        elif path == '/streaming/list' and http_method == 'GET':
+            return handle_list_streams()
         else:
-            return create_response(400, {'error': 'Invalid endpoint or method'})
+            return create_response(404, {'error': 'Endpoint not found'})
             
     except Exception as e:
-        logger.error(f"Streaming handler error: {str(e)}")
+        logger.error(f"Error in lambda_handler: {str(e)}")
         return create_response(500, {'error': 'Internal server error'})
 
-def handle_create_stream(body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a new stream configuration"""
-    
+def handle_start_stream(body):
+    """Handle stream start request"""
     try:
-        creator_id = body.get('creator_id')
-        title = body.get('title')
-        description = body.get('description', '')
-        category = body.get('category', 'general')
-        scheduled_start = body.get('scheduled_start')
+        stream_name = body.get('stream_name')
+        stream_key = body.get('stream_key')
         
-        if not creator_id or not title:
-            return create_response(400, {'error': 'Creator ID and title required'})
+        if not stream_name:
+            return create_response(400, {'error': 'Stream name required'})
         
-        stream_id = str(uuid.uuid4())
-        s3_media_prefix = f"streams/{creator_id}/{stream_id}"
-        
-        # Insert stream into Aurora database
-        db_secret = get_db_secret()
-        
-        sql = """
-        INSERT INTO streams (
-            id, creator_id, title, description, category, 
-            s3_media_prefix, scheduled_start, status, created_at
-        ) VALUES (
-            :stream_id, :creator_id, :title, :description, :category,
-            :s3_media_prefix, :scheduled_start, 'scheduled', NOW()
-        )
-        """
-        
-        parameters = [
-            {'name': 'stream_id', 'value': {'stringValue': stream_id}},
-            {'name': 'creator_id', 'value': {'stringValue': creator_id}},
-            {'name': 'title', 'value': {'stringValue': title}},
-            {'name': 'description', 'value': {'stringValue': description}},
-            {'name': 'category', 'value': {'stringValue': category}},
-            {'name': 's3_media_prefix', 'value': {'stringValue': s3_media_prefix}},
-            {'name': 'scheduled_start', 'value': {'stringValue': scheduled_start} if scheduled_start else {'isNull': True}}
-        ]
-        
-        rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=sql,
-            parameters=parameters
-        )
-        
-        # Store stream metadata in DynamoDB for real-time access
-        streams_table = dynamodb.Table(os.environ['DYNAMODB_STREAMS_TABLE'])
-        streams_table.put_item(
-            Item={
-                'stream_id': stream_id,
-                'creator_id': creator_id,
-                'title': title,
-                'status': 'scheduled',
-                'viewer_count': 0,
-                'created_at': datetime.utcnow().isoformat(),
-                'ttl': int((datetime.utcnow() + timedelta(days=30)).timestamp())
-            }
-        )
-        
-        return create_response(201, {
-            'stream_id': stream_id,
-            'title': title,
-            'status': 'scheduled',
-            's3_media_prefix': s3_media_prefix,
-            'created_at': datetime.utcnow().isoformat()
-        })
-        
-    except Exception as e:
-        logger.error(f"Create stream error: {str(e)}")
-        return create_response(500, {'error': 'Failed to create stream'})
-
-def handle_start_stream(body: Dict[str, Any]) -> Dict[str, Any]:
-    """Start a live stream"""
-    
-    try:
-        stream_id = body.get('stream_id')
-        
-        if not stream_id:
-            return create_response(400, {'error': 'Stream ID required'})
-        
-        # Get stream details from database
-        db_secret = get_db_secret()
-        
-        sql = "SELECT * FROM streams WHERE id = :stream_id"
-        parameters = [{'name': 'stream_id', 'value': {'stringValue': stream_id}}]
-        
-        result = rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=sql,
-            parameters=parameters
-        )
-        
-        if not result['records']:
-            return create_response(404, {'error': 'Stream not found'})
-        
-        # Create MediaLive channel if MediaLive is enabled
-        medialive_channel_id = None
-        if os.environ.get('MEDIALIVE_ROLE_ARN'):
-            try:
-                medialive_channel_id = create_medialive_channel(stream_id)
-            except Exception as e:
-                logger.warning(f"MediaLive channel creation failed: {str(e)}")
-        
-        # Update stream status to live
-        update_sql = """
-        UPDATE streams 
-        SET status = 'live', 
-            actual_start = NOW(),
-            media_live_channel_id = :channel_id
-        WHERE id = :stream_id
-        """
-        
-        update_params = [
-            {'name': 'stream_id', 'value': {'stringValue': stream_id}},
-            {'name': 'channel_id', 'value': {'stringValue': medialive_channel_id} if medialive_channel_id else {'isNull': True}}
-        ]
-        
-        rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=update_sql,
-            parameters=update_params
-        )
-        
-        # Update DynamoDB
-        streams_table = dynamodb.Table(os.environ['DYNAMODB_STREAMS_TABLE'])
-        streams_table.update_item(
-            Key={'stream_id': stream_id},
-            UpdateExpression='SET #status = :status, actual_start = :start_time',
-            ExpressionAttributeNames={'#status': 'status'},
-            ExpressionAttributeValues={
-                ':status': 'live',
-                ':start_time': datetime.utcnow().isoformat()
-            }
-        )
+        # Mock stream start (replace with actual MediaLive logic)
+        stream_data = {
+            'stream_id': f"stream_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'stream_name': stream_name,
+            'status': 'starting',
+            'rtmp_url': f"rtmp://example.com/live/{stream_key or 'default'}",
+            'hls_url': f"https://example.com/hls/{stream_name}/playlist.m3u8",
+            'created_at': datetime.now().isoformat()
+        }
         
         return create_response(200, {
-            'stream_id': stream_id,
-            'status': 'live',
-            'medialive_channel_id': medialive_channel_id,
-            'started_at': datetime.utcnow().isoformat()
+            'message': 'Stream started successfully',
+            'stream': stream_data
         })
         
     except Exception as e:
         logger.error(f"Start stream error: {str(e)}")
         return create_response(500, {'error': 'Failed to start stream'})
 
-def handle_stop_stream(body: Dict[str, Any]) -> Dict[str, Any]:
-    """Stop a live stream"""
-    
+def handle_stop_stream(body):
+    """Handle stream stop request"""
     try:
         stream_id = body.get('stream_id')
         
         if not stream_id:
             return create_response(400, {'error': 'Stream ID required'})
         
-        # Get stream details
-        db_secret = get_db_secret()
-        
-        sql = "SELECT media_live_channel_id FROM streams WHERE id = :stream_id AND status = 'live'"
-        parameters = [{'name': 'stream_id', 'value': {'stringValue': stream_id}}]
-        
-        result = rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=sql,
-            parameters=parameters
-        )
-        
-        if not result['records']:
-            return create_response(404, {'error': 'Live stream not found'})
-        
-        # Stop MediaLive channel if it exists
-        medialive_channel_id = result['records'][0][0].get('stringValue')
-        if medialive_channel_id:
-            try:
-                medialive_client.stop_channel(ChannelId=medialive_channel_id)
-            except Exception as e:
-                logger.warning(f"Failed to stop MediaLive channel: {str(e)}")
-        
-        # Update stream status to ended
-        update_sql = """
-        UPDATE streams 
-        SET status = 'ended', end_time = NOW()
-        WHERE id = :stream_id
-        """
-        
-        update_params = [{'name': 'stream_id', 'value': {'stringValue': stream_id}}]
-        
-        rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=update_sql,
-            parameters=update_params
-        )
-        
-        # Update DynamoDB
-        streams_table = dynamodb.Table(os.environ['DYNAMODB_STREAMS_TABLE'])
-        streams_table.update_item(
-            Key={'stream_id': stream_id},
-            UpdateExpression='SET #status = :status, end_time = :end_time',
-            ExpressionAttributeNames={'#status': 'status'},
-            ExpressionAttributeValues={
-                ':status': 'ended',
-                ':end_time': datetime.utcnow().isoformat()
-            }
-        )
-        
+        # Mock stream stop (replace with actual MediaLive logic)
         return create_response(200, {
+            'message': 'Stream stopped successfully',
             'stream_id': stream_id,
-            'status': 'ended',
-            'ended_at': datetime.utcnow().isoformat()
+            'stopped_at': datetime.now().isoformat()
         })
         
     except Exception as e:
         logger.error(f"Stop stream error: {str(e)}")
         return create_response(500, {'error': 'Failed to stop stream'})
 
-def handle_list_streams(query_params: Dict[str, Any]) -> Dict[str, Any]:
-    """List streams with optional filtering"""
-    
+def handle_stream_status(query_params):
+    """Handle stream status request"""
     try:
-        creator_id = query_params.get('creator_id')
-        status = query_params.get('status')
-        limit = int(query_params.get('limit', 20))
-        offset = int(query_params.get('offset', 0))
+        stream_id = query_params.get('stream_id') if query_params else None
         
-        # Build SQL query
-        sql = "SELECT * FROM streams WHERE 1=1"
-        parameters = []
+        if not stream_id:
+            return create_response(400, {'error': 'Stream ID required'})
         
-        if creator_id:
-            sql += " AND creator_id = :creator_id"
-            parameters.append({'name': 'creator_id', 'value': {'stringValue': creator_id}})
+        # Mock stream status (replace with actual MediaLive logic)
+        status_data = {
+            'stream_id': stream_id,
+            'status': 'active',
+            'viewers': 42,
+            'bitrate': '2500 kbps',
+            'resolution': '1920x1080',
+            'uptime': '00:15:30'
+        }
         
-        if status:
-            sql += " AND status = :status"
-            parameters.append({'name': 'status', 'value': {'stringValue': status}})
+        return create_response(200, status_data)
         
-        sql += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
-        parameters.extend([
-            {'name': 'limit', 'value': {'longValue': limit}},
-            {'name': 'offset', 'value': {'longValue': offset}}
-        ])
-        
-        result = rds_client.execute_statement(
-            resourceArn=os.environ['AURORA_CLUSTER_ARN'],
-            secretArn=os.environ['AURORA_SECRET_ARN'],
-            database='streaming_platform',
-            sql=sql,
-            parameters=parameters
-        )
-        
-        streams = []
-        for record in result['records']:
-            stream = {
-                'id': record[0]['stringValue'],
-                'creator_id': record[1]['stringValue'],
-                'title': record[2]['stringValue'],
-                'description': record[3].get('stringValue', ''),
-                'category': record[4].get('stringValue', ''),
-                'status': record[5]['stringValue'],
-                'viewer_count': record[6].get('longValue', 0),
-                'created_at': record[7]['stringValue']
+    except Exception as e:
+        logger.error(f"Stream status error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get stream status'})
+
+def handle_list_streams():
+    """Handle list streams request"""
+    try:
+        # Mock stream list (replace with actual data source)
+        streams = [
+            {
+                'stream_id': 'stream_001',
+                'stream_name': 'Gaming Stream',
+                'status': 'active',
+                'viewers': 150,
+                'created_at': '2024-01-15T10:30:00Z'
+            },
+            {
+                'stream_id': 'stream_002',
+                'stream_name': 'Music Stream',
+                'status': 'inactive',
+                'viewers': 0,
+                'created_at': '2024-01-15T09:15:00Z'
             }
-            streams.append(stream)
+        ]
         
         return create_response(200, {
             'streams': streams,
-            'total': len(streams),
-            'limit': limit,
-            'offset': offset
+            'total': len(streams)
         })
         
     except Exception as e:
         logger.error(f"List streams error: {str(e)}")
         return create_response(500, {'error': 'Failed to list streams'})
 
-def create_medialive_channel(stream_id: str) -> str:
-    """Create MediaLive channel for live streaming"""
-    
+def handle_live_streams():
+    """Handle live streams request"""
     try:
-        channel_name = f"stream-{stream_id}"
+        live_streams = [
+            {
+                'stream_id': 'live_001',
+                'stream_name': 'Gaming Tournament Live',
+                'streamer': 'ProGamer123',
+                'viewers': random.randint(100, 1000),
+                'category': 'Gaming',
+                'started_at': datetime.now().isoformat()
+            },
+            {
+                'stream_id': 'live_002',
+                'stream_name': 'Music Session',
+                'streamer': 'MusicMaker',
+                'viewers': random.randint(50, 500),
+                'category': 'Music',
+                'started_at': datetime.now().isoformat()
+            }
+        ]
         
-        # Basic MediaLive channel configuration
-        channel_config = {
-            'Name': channel_name,
-            'InputSpecification': {
-                'Codec': 'AVC',
-                'MaximumBitrate': 'MAX_20_MBPS',
-                'Resolution': 'HD'
-            },
-            'Destinations': [
-                {
-                    'Id': 'destination1',
-                    'Settings': [
-                        {
-                            'Url': f"s3://{os.environ['S3_MEDIA_BUCKET']}/live/{stream_id}/",
-                            'Username': '',
-                            'PasswordParam': ''
-                        }
-                    ]
-                }
-            ],
-            'EncoderSettings': {
-                'AudioDescriptions': [
-                    {
-                        'AudioSelectorName': 'default',
-                        'Name': 'audio_1',
-                        'CodecSettings': {
-                            'AacSettings': {
-                                'Bitrate': 96000,
-                                'CodingMode': 'CODING_MODE_2_0',
-                                'InputType': 'NORMAL',
-                                'Profile': 'LC',
-                                'RateControlMode': 'CBR',
-                                'RawFormat': 'NONE',
-                                'SampleRate': 48000,
-                                'Spec': 'MPEG4'
-                            }
-                        }
-                    }
-                ],
-                'VideoDescriptions': [
-                    {
-                        'Name': 'video_1080p',
-                        'CodecSettings': {
-                            'H264Settings': {
-                                'Bitrate': 5000000,
-                                'FramerateControl': 'SPECIFIED',
-                                'FramerateNumerator': 30,
-                                'FramerateDenominator': 1,
-                                'GopSize': 2.0,
-                                'Profile': 'HIGH',
-                                'RateControlMode': 'CBR'
-                            }
-                        },
-                        'Height': 1080,
-                        'Width': 1920
-                    }
-                ],
-                'OutputGroups': [
-                    {
-                        'Name': 'HLS',
-                        'OutputGroupSettings': {
-                            'HlsGroupSettings': {
-                                'Destination': {
-                                    'DestinationRefId': 'destination1'
-                                },
-                                'SegmentLength': 6,
-                                'ManifestName': 'index',
-                                'DirectoryStructure': 'SINGLE_DIRECTORY'
-                            }
-                        },
-                        'Outputs': [
-                            {
-                                'OutputName': 'output_1080p',
-                                'VideoDescriptionName': 'video_1080p',
-                                'AudioDescriptionNames': ['audio_1'],
-                                'OutputSettings': {
-                                    'HlsOutputSettings': {
-                                        'NameModifier': '_1080p'
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                ]
-            },
-            'RoleArn': os.environ['MEDIALIVE_ROLE_ARN']
+        return create_response(200, {
+            'live_streams': live_streams,
+            'total': len(live_streams)
+        })
+        
+    except Exception as e:
+        logger.error(f"Live streams error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get live streams'})
+
+def handle_archived_streams():
+    """Handle archived streams request"""
+    try:
+        archived_streams = [
+            {
+                'stream_id': 'archive_001',
+                'stream_name': 'Previous Gaming Session',
+                'streamer': 'ProGamer123',
+                'duration': '02:15:30',
+                'views': random.randint(1000, 10000),
+                'archived_at': '2024-01-15T10:30:00Z'
+            }
+        ]
+        
+        return create_response(200, {
+            'archived_streams': archived_streams,
+            'total': len(archived_streams)
+        })
+        
+    except Exception as e:
+        logger.error(f"Archived streams error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get archived streams'})
+
+def handle_stream_schedule():
+    """Handle stream schedule request"""
+    try:
+        schedule = [
+            {
+                'stream_id': 'scheduled_001',
+                'stream_name': 'Weekly Gaming Tournament',
+                'streamer': 'ProGamer123',
+                'scheduled_time': '2024-01-20T15:00:00Z',
+                'category': 'Gaming'
+            }
+        ]
+        
+        return create_response(200, {
+            'schedule': schedule,
+            'total': len(schedule)
+        })
+        
+    except Exception as e:
+        logger.error(f"Stream schedule error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get stream schedule'})
+
+def handle_stream_metrics(query_params):
+    """Handle stream metrics request"""
+    try:
+        metrics = {
+            'total_streams_today': random.randint(50, 200),
+            'concurrent_viewers': random.randint(500, 5000),
+            'peak_viewers_today': random.randint(1000, 10000),
+            'average_stream_duration': f"{random.randint(60, 180)} minutes"
         }
         
-        response = medialive_client.create_channel(**channel_config)
-        return response['Channel']['Id']
+        return create_response(200, metrics)
         
     except Exception as e:
-        logger.error(f"MediaLive channel creation error: {str(e)}")
-        raise
+        logger.error(f"Stream metrics error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get stream metrics'})
 
-def get_db_secret() -> Dict[str, Any]:
-    """Get database credentials from Secrets Manager"""
-    
+def handle_get_media():
+    """Handle get media request"""
     try:
-        response = secrets_client.get_secret_value(SecretId=os.environ['AURORA_SECRET_ARN'])
-        return json.loads(response['SecretString'])
+        media_files = [
+            {
+                'media_id': 'media_001',
+                'filename': 'stream_recording_001.mp4',
+                'size': '1.2 GB',
+                'duration': '02:15:30',
+                'created_at': '2024-01-15T10:30:00Z'
+            }
+        ]
+        
+        return create_response(200, {
+            'media_files': media_files,
+            'total': len(media_files)
+        })
+        
     except Exception as e:
-        logger.error(f"Failed to get database secret: {str(e)}")
-        raise
+        logger.error(f"Get media error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get media'})
 
-def create_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
-    """Create standardized API response"""
-    
+def handle_upload_media(body):
+    """Handle media upload request"""
+    try:
+        filename = body.get('filename')
+        if not filename:
+            return create_response(400, {'error': 'Filename required'})
+        
+        upload_data = {
+            'upload_id': f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'presigned_url': f"https://example.com/upload/{filename}",
+            'expires_in': 3600
+        }
+        
+        return create_response(200, upload_data)
+        
+    except Exception as e:
+        logger.error(f"Upload media error: {str(e)}")
+        return create_response(500, {'error': 'Failed to upload media'})
+
+def handle_transcode_media(body):
+    """Handle media transcoding request"""
+    try:
+        media_id = body.get('media_id')
+        if not media_id:
+            return create_response(400, {'error': 'Media ID required'})
+        
+        transcode_data = {
+            'job_id': f"transcode_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'status': 'queued',
+            'estimated_completion': '10 minutes'
+        }
+        
+        return create_response(200, transcode_data)
+        
+    except Exception as e:
+        logger.error(f"Transcode media error: {str(e)}")
+        return create_response(500, {'error': 'Failed to transcode media'})
+
+def handle_cdn_media():
+    """Handle CDN media request"""
+    try:
+        cdn_info = {
+            'cdn_url': 'https://cdn.example.com',
+            'cache_status': 'active',
+            'bandwidth_usage': '1.2 TB',
+            'cache_hit_ratio': '95%'
+        }
+        
+        return create_response(200, cdn_info)
+        
+    except Exception as e:
+        logger.error(f"CDN media error: {str(e)}")
+        return create_response(500, {'error': 'Failed to get CDN media info'})
+
+def create_response(status_code, body):
+    """Create HTTP response"""
     return {
         'statusCode': status_code,
         'headers': {
