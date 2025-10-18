@@ -95,43 +95,9 @@ resource "aws_lambda_function" "streaming_handler" {
   tags = var.tags
 }
 
-# Payment Processing Lambda
-resource "aws_lambda_function" "payment_handler" {
-  filename      = "${path.module}/functions/payment_handler.zip"
-  function_name = "${var.project_name}-${var.environment}-payment-handler"
-  role          = aws_iam_role.lambda_payment_role.arn
-  handler       = "payment_handler.lambda_handler"
-  runtime       = "python3.9"
-  timeout       = 60
-  memory_size   = 256
-
-  layers = [aws_lambda_layer_version.shared_dependencies.arn]
-
-  environment {
-    variables = {
-      STRIPE_SECRET_KEY_ARN     = var.stripe_secret_key_arn
-      STRIPE_WEBHOOK_SECRET_ARN = var.stripe_webhook_secret_arn
-      AURORA_CLUSTER_ARN        = var.aurora_cluster_arn
-      AURORA_SECRET_ARN         = var.aurora_secret_arn
-      COGNITO_USER_POOL_ID      = var.cognito_user_pool_id
-      SNS_TOPIC_ARN             = var.payment_notifications_topic_arn
-      ENVIRONMENT               = var.environment
-      LOG_LEVEL                 = var.log_level
-    }
-  }
-
-  vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [var.lambda_security_group_id]
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_payment_vpc,
-    aws_cloudwatch_log_group.payment_handler
-  ]
-
-  tags = var.tags
-}
+# Payment Processing Lambda - DISABLED FOR DEVELOPMENT
+# Removed to simplify development workflow
+# Users will be manually assigned Bronze/Silver/Gold tiers via admin portal
 
 # Support Ticket Management Lambda
 resource "aws_lambda_function" "support_handler" {
@@ -249,7 +215,8 @@ resource "aws_lambda_function" "moderation_handler" {
 resource "aws_cloudwatch_log_group" "auth_handler" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-auth-handler"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -257,23 +224,19 @@ resource "aws_cloudwatch_log_group" "auth_handler" {
 resource "aws_cloudwatch_log_group" "streaming_handler" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-streaming-handler"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
 
-resource "aws_cloudwatch_log_group" "payment_handler" {
-  name              = "/aws/lambda/${var.project_name}-${var.environment}-payment-handler"
-  retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
-
-  tags = var.tags
-}
+# Payment handler log group - DISABLED FOR DEVELOPMENT
 
 resource "aws_cloudwatch_log_group" "support_handler" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-support-handler"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -281,7 +244,8 @@ resource "aws_cloudwatch_log_group" "support_handler" {
 resource "aws_cloudwatch_log_group" "analytics_handler" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-analytics-handler"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -289,7 +253,8 @@ resource "aws_cloudwatch_log_group" "analytics_handler" {
 resource "aws_cloudwatch_log_group" "moderation_handler" {
   name              = "/aws/lambda/${var.project_name}-${var.environment}-moderation-handler"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
 
   tags = var.tags
 }
@@ -307,11 +272,7 @@ data "archive_file" "streaming_handler" {
   output_path = "${path.module}/functions/streaming_handler.zip"
 }
 
-data "archive_file" "payment_handler" {
-  type        = "zip"
-  source_file = "${path.module}/functions/payment_handler.py"
-  output_path = "${path.module}/functions/payment_handler.zip"
-}
+# Payment handler archive - DISABLED FOR DEVELOPMENT
 
 data "archive_file" "support_handler" {
   type        = "zip"
@@ -373,25 +334,7 @@ resource "aws_iam_role" "lambda_streaming_role" {
   tags = var.tags
 }
 
-# Payment Lambda IAM Role
-resource "aws_iam_role" "lambda_payment_role" {
-  name = "${var.project_name}-${var.environment}-lambda-payment-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = var.tags
-}
+# Payment Lambda IAM Role - DISABLED FOR DEVELOPMENT
 
 # Support Lambda IAM Role
 resource "aws_iam_role" "lambda_support_role" {
@@ -464,10 +407,7 @@ resource "aws_iam_role_policy_attachment" "lambda_streaming_vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_payment_vpc" {
-  role       = aws_iam_role.lambda_payment_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
+# Payment Lambda VPC policy - DISABLED FOR DEVELOPMENT
 
 resource "aws_iam_role_policy_attachment" "lambda_support_vpc" {
   role       = aws_iam_role.lambda_support_role.name
@@ -598,60 +538,7 @@ resource "aws_iam_role_policy" "lambda_streaming_policy" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_payment_policy" {
-  name = "${var.project_name}-${var.environment}-lambda-payment-policy"
-  role = aws_iam_role.lambda_payment_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "rds-data:ExecuteStatement",
-          "rds-data:BatchExecuteStatement",
-          "rds-data:BeginTransaction",
-          "rds-data:CommitTransaction",
-          "rds-data:RollbackTransaction"
-        ]
-        Resource = var.aurora_cluster_arn
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "cognito-idp:AdminUpdateUserAttributes",
-          "cognito-idp:AdminGetUser"
-        ]
-        Resource = "arn:aws:cognito-idp:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:userpool/${var.cognito_user_pool_id}"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "sns:Publish"
-        ]
-        Resource = var.payment_notifications_topic_arn
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue"
-        ]
-        Resource = [
-          var.stripe_secret_key_arn,
-          var.stripe_webhook_secret_arn,
-          var.aurora_secret_arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "kms:Decrypt"
-        ]
-        Resource = var.kms_key_arn
-      }
-    ]
-  })
-}
+# Payment Lambda IAM Policy - DISABLED FOR DEVELOPMENT
 
 resource "aws_iam_role_policy" "lambda_support_policy" {
   name = "${var.project_name}-${var.environment}-lambda-support-policy"
@@ -695,7 +582,7 @@ resource "aws_iam_role_policy" "lambda_support_policy" {
         Action = [
           "sns:Publish"
         ]
-        Resource = var.support_notifications_topic_arn
+        Resource = var.support_notifications_topic_arn != "" ? var.support_notifications_topic_arn : "*"
       },
       {
         Effect = "Allow"
@@ -832,7 +719,7 @@ resource "aws_iam_role_policy" "lambda_moderation_policy" {
         Action = [
           "sns:Publish"
         ]
-        Resource = var.moderation_notifications_topic_arn
+        Resource = var.moderation_notifications_topic_arn != "" ? var.moderation_notifications_topic_arn : "*"
       },
       {
         Effect = "Allow"
@@ -850,4 +737,54 @@ resource "aws_iam_role_policy" "lambda_moderation_policy" {
       }
     ]
   })
+} # JWT
+# JWT Middleware Lambda for API Gateway Authorization
+resource "aws_lambda_function" "jwt_middleware" {
+  filename      = "${path.module}/functions/jwt_middleware.zip"
+  function_name = "${var.project_name}-${var.environment}-jwt-middleware"
+  role          = aws_iam_role.lambda_auth_role.arn
+  handler       = "jwt_middleware.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 30
+  memory_size   = 256
+
+  source_code_hash = data.archive_file.jwt_middleware.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = var.private_subnet_ids
+    security_group_ids = [var.lambda_security_group_id]
+  }
+
+  environment {
+    variables = {
+      LOG_LEVEL                   = var.log_level
+      COGNITO_USER_POOL_ID        = var.cognito_user_pool_id
+      COGNITO_USER_POOL_CLIENT_ID = var.cognito_client_id
+      # AWS_REGION is automatically available as environment variable
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_auth_vpc,
+    aws_cloudwatch_log_group.jwt_middleware,
+  ]
+
+  tags = var.tags
+}
+
+# Archive JWT middleware function
+data "archive_file" "jwt_middleware" {
+  type        = "zip"
+  source_file = "${path.module}/functions/jwt_middleware.py"
+  output_path = "${path.module}/functions/jwt_middleware.zip"
+}
+
+# CloudWatch Log Group for JWT middleware
+resource "aws_cloudwatch_log_group" "jwt_middleware" {
+  name              = "/aws/lambda/${var.project_name}-${var.environment}-jwt-middleware"
+  retention_in_days = var.log_retention_days
+  # Temporarily disable KMS encryption to avoid dependency issues
+  # kms_key_id        = var.kms_key_arn
+
+  tags = var.tags
 }

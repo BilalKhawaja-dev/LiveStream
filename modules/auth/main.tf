@@ -421,3 +421,24 @@ resource "aws_iam_role_policy" "creator" {
     ]
   })
 }
+#
+# JWT Secret for custom token signing
+resource "random_password" "jwt_secret" {
+  length  = 64
+  special = true
+}
+
+resource "aws_secretsmanager_secret" "jwt_secret" {
+  name                    = "${var.project_name}-${var.environment}-jwt-secret"
+  description             = "JWT signing secret for custom tokens"
+  recovery_window_in_days = 7
+
+  tags = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_secret" {
+  secret_id = aws_secretsmanager_secret.jwt_secret.id
+  secret_string = jsonencode({
+    jwt_secret = random_password.jwt_secret.result
+  })
+}

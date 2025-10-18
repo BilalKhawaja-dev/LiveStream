@@ -417,3 +417,38 @@ resource "aws_security_group" "vpc_endpoints" {
 
 # Data source for current region
 data "aws_region" "current" {}
+
+# Security group for Lambda functions
+resource "aws_security_group" "lambda" {
+  name_prefix = "${var.project_name}-${var.environment}-lambda-"
+  vpc_id      = aws_vpc.main.id
+
+  description = "Security group for Lambda functions"
+
+  # Outbound rules
+  egress {
+    description = "All outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Inbound rules for VPC communication
+  ingress {
+    description = "VPC internal communication"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-${var.environment}-lambda-sg"
+    Type = "Lambda"
+  })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

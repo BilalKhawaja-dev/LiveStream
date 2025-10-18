@@ -13,7 +13,7 @@ resource "aws_ecs_cluster" "main" {
     execute_command_configuration {
       # KMS encryption disabled for development to avoid permission issues
       # kms_key_id = var.kms_key_arn
-      logging    = "OVERRIDE"
+      logging = "OVERRIDE"
 
       log_configuration {
         cloud_watch_encryption_enabled = false

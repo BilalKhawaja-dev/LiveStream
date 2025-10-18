@@ -106,21 +106,8 @@ variable "cloudfront_distribution_id" {
   default     = ""
 }
 
-# Payment Configuration
-variable "stripe_secret_key_arn" {
-  description = "Stripe secret key ARN in Secrets Manager"
-  type        = string
-}
-
-variable "stripe_webhook_secret_arn" {
-  description = "Stripe webhook secret ARN in Secrets Manager"
-  type        = string
-}
-
-variable "payment_notifications_topic_arn" {
-  description = "SNS topic ARN for payment notifications"
-  type        = string
-}
+# Payment Configuration - DISABLED FOR DEVELOPMENT
+# Payment processing removed to simplify development workflow
 
 # Support Configuration
 variable "bedrock_model_id" {

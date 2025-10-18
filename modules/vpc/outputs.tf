@@ -45,6 +45,11 @@ output "ecs_security_group_id" {
   value       = aws_security_group.ecs.id
 }
 
+output "lambda_security_group_id" {
+  description = "ID of the Lambda security group"
+  value       = aws_security_group.lambda.id
+}
+
 output "public_route_table_id" {
   description = "ID of the public route table"
   value       = aws_route_table.public.id

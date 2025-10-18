@@ -775,9 +775,9 @@ data "archive_file" "backup_validator_zip" {
 
   type        = "zip"
   output_path = "${path.module}/backup_validator.zip"
-  
+
   source {
-    content = <<EOF
+    content  = <<EOF
 import json
 import boto3
 import os

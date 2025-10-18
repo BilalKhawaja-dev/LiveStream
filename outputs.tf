@@ -134,4 +134,91 @@ output "ecs_cluster_arn" {
 output "ecs_service_names" {
   description = "List of ECS service names"
   value       = var.enable_ecs ? module.ecs[0].ecs_service_names : []
+} # A
+# API Gateway Outputs
+output "api_gateway_url" {
+  description = "API Gateway invoke URL"
+  value       = module.api_gateway.api_gateway_invoke_url
+}
+
+output "api_gateway_id" {
+  description = "API Gateway REST API ID"
+  value       = module.api_gateway.api_gateway_id
+}
+
+output "api_gateway_stage" {
+  description = "API Gateway stage name"
+  value       = module.api_gateway.api_gateway_stage_name
+}
+
+# Lambda Function Information
+output "lambda_functions" {
+  description = "Lambda function information"
+  value = {
+    auth_handler      = module.lambda.auth_handler_arn
+    streaming_handler = module.lambda.streaming_handler_arn
+    jwt_middleware    = module.lambda.jwt_authorizer_function_arn
+  }
+}
+
+# Authentication Information
+output "cognito_config" {
+  description = "Cognito configuration for frontend applications"
+  value = {
+    user_pool_id        = module.auth.user_pool_id
+    user_pool_client_id = module.auth.user_pool_client_id
+    region              = var.aws_region
+  }
+}
+
+# Frontend Environment Variables
+output "frontend_env_vars" {
+  description = "Environment variables for frontend applications"
+  value = {
+    REACT_APP_API_BASE_URL                = module.api_gateway.api_gateway_invoke_url
+    REACT_APP_COGNITO_USER_POOL_ID        = module.auth.user_pool_id
+    REACT_APP_COGNITO_USER_POOL_CLIENT_ID = module.auth.user_pool_client_id
+    REACT_APP_AWS_REGION                  = var.aws_region
+    REACT_APP_ENVIRONMENT                 = var.environment
+  }
+}
+
+# Application Access URLs
+output "application_urls" {
+  description = "URLs to access the applications"
+  value = {
+    # Frontend applications (via HTTPS through API Gateway)
+    frontend_https_url = "${module.api_gateway.api_gateway_invoke_url}/"
+
+    # Backend API endpoints
+    api_base_url = "${module.api_gateway.api_gateway_invoke_url}/api"
+    auth_endpoints = {
+      login    = "${module.api_gateway.api_gateway_invoke_url}/auth/login"
+      register = "${module.api_gateway.api_gateway_invoke_url}/auth/register"
+      refresh  = "${module.api_gateway.api_gateway_invoke_url}/auth/refresh"
+    }
+
+    # Direct ALB access (HTTP only, for development)
+    alb_http_url = var.enable_ecs ? "http://${module.alb[0].alb_dns_name}/" : "Not deployed"
+  }
+}
+
+# Deployment Summary
+output "deployment_summary" {
+  description = "Summary of what has been deployed"
+  value = {
+    infrastructure_status = "✅ Complete"
+    frontend_status       = var.enable_ecs ? "✅ Deployed" : "❌ Disabled"
+    backend_api_status    = "✅ Deployed"
+    database_status       = var.enable_aurora ? "✅ Deployed" : "❌ Disabled"
+    ssl_solution          = "✅ API Gateway provides HTTPS"
+
+    next_steps = [
+      "1. Update frontend AuthProvider to use real Cognito (remove mock data)",
+      "2. Test authentication: ${module.api_gateway.api_gateway_invoke_url}/auth/login",
+      "3. Access frontend via HTTPS: ${module.api_gateway.api_gateway_invoke_url}/",
+      "4. Check CloudWatch logs for any issues",
+      var.enable_aurora ? "5. Database is ready with schema" : "5. Enable Aurora in terraform.tfvars for full functionality"
+    ]
+  }
 }

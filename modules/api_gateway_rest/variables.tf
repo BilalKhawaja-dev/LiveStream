@@ -169,4 +169,23 @@ variable "create_api_keys" {
   description = "Create API keys for usage plans"
   type        = bool
   default     = true
+} #
+# ALB Integration for Frontend Proxy
+variable "alb_dns_name" {
+  description = "ALB DNS name for frontend proxy integration"
+  type        = string
+  default     = ""
+}
+
+# Lambda Integration Variables
+variable "lambda_function_arns" {
+  description = "Map of Lambda function ARNs"
+  type        = map(string)
+  default     = {}
+}
+
+variable "lambda_function_invoke_arns" {
+  description = "Map of Lambda function invoke ARNs"
+  type        = map(string)
+  default     = {}
 }

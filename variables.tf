@@ -1257,3 +1257,59 @@ variable "api_base_url" {
   type        = string
   default     = ""
 }
+# API Gateway Configuration
+variable "api_allowed_ip_ranges" {
+  description = "List of allowed IP ranges for API access"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+variable "cors_allow_origin" {
+  description = "CORS allow origin header value"
+  type        = string
+  default     = "'*'"
+}
+
+variable "api_throttling_rate_limit" {
+  description = "API Gateway throttling rate limit (requests per second)"
+  type        = number
+  default     = 1000
+}
+
+variable "api_throttling_burst_limit" {
+  description = "API Gateway throttling burst limit"
+  type        = number
+  default     = 2000
+}
+
+variable "api_basic_plan_quota_limit" {
+  description = "Daily quota limit for basic plan"
+  type        = number
+  default     = 10000
+}
+
+variable "api_basic_plan_rate_limit" {
+  description = "Rate limit for basic plan (requests per second)"
+  type        = number
+  default     = 100
+}
+
+variable "api_premium_plan_quota_limit" {
+  description = "Daily quota limit for premium plan"
+  type        = number
+  default     = 50000
+}
+
+variable "api_premium_plan_rate_limit" {
+  description = "Rate limit for premium plan (requests per second)"
+  type        = number
+  default     = 500
+}
+
+
+
+variable "enable_medialive" {
+  description = "Enable MediaLive for live streaming (costs ~$1.50/hour when running)"
+  type        = bool
+  default     = false
+}

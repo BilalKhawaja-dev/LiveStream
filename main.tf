@@ -81,11 +81,11 @@ module "aurora" {
   environment  = var.environment
 
   # VPC Configuration
-  vpc_id                     = module.vpc.vpc_id
-  database_subnet_ids        = module.vpc.database_subnet_ids
-  aurora_security_group_id   = module.vpc.aurora_security_group_id
-  aurora_subnet_group_name   = module.vpc.aurora_subnet_group_name
-  availability_zones         = var.availability_zones
+  vpc_id                   = module.vpc.vpc_id
+  database_subnet_ids      = module.vpc.database_subnet_ids
+  aurora_security_group_id = module.vpc.aurora_security_group_id
+  aurora_subnet_group_name = module.vpc.aurora_subnet_group_name
+  availability_zones       = var.availability_zones
 
 
   # Serverless v2 scaling configuration
@@ -390,3 +390,101 @@ module "ecs" {
 
   depends_on = [module.vpc, module.alb, module.ecr, module.auth, module.storage]
 }
+
+# Lambda Functions Module - Business logic
+module "lambda" {
+  source = "./modules/lambda"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # Network Configuration
+  private_subnet_ids       = module.vpc.private_subnet_ids
+  lambda_security_group_id = module.vpc.lambda_security_group_id
+
+  # Authentication Configuration
+  cognito_user_pool_id = module.auth.user_pool_id
+  cognito_client_id    = module.auth.user_pool_client_id
+  jwt_secret_arn       = module.auth.jwt_secret_arn
+
+  # Database Configuration
+  aurora_cluster_arn = var.enable_aurora ? module.aurora[0].cluster_arn : ""
+  aurora_secret_arn  = var.enable_aurora ? module.aurora[0].secrets_manager_secret_arn : ""
+
+  # DynamoDB Configuration
+  dynamodb_streams_table   = module.dynamodb.streams_table_name
+  dynamodb_tickets_table   = module.dynamodb.user_sessions_table_name # Using user_sessions for tickets temporarily
+  dynamodb_analytics_table = module.dynamodb.log_metadata_table_name  # Using log_metadata for analytics temporarily
+
+  # S3 Configuration
+  s3_media_bucket = var.enable_media_services ? module.media_services[0].media_content_bucket_id : ""
+  kms_key_arn     = module.storage.kms_key_arn
+
+  # MediaLive Configuration (optional)
+  medialive_role_arn = var.enable_medialive ? "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/MediaLiveAccessRole" : ""
+
+  # Payment Configuration - DISABLED FOR DEVELOPMENT
+  # Payment processing removed to simplify development workflow
+
+  # Support Configuration (placeholder - will be implemented later)
+  support_notifications_topic_arn = ""
+
+  # Analytics Configuration (placeholder - will be implemented later)
+  athena_database_name  = "streaming_platform"
+  athena_workgroup_name = "${var.project_name}-${var.environment}-workgroup"
+  athena_results_bucket = module.storage.athena_results_bucket_id
+
+  # Moderation Configuration (placeholder - will be implemented later)
+  moderation_notifications_topic_arn = ""
+
+  # Monitoring Configuration
+  log_retention_days = var.log_retention_days
+
+  tags = local.common_tags
+
+  depends_on = [module.vpc, module.auth, module.storage, module.dynamodb]
+}
+
+# API Gateway REST Module - Backend API
+module "api_gateway" {
+  source = "./modules/api_gateway_rest"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # Lambda Function Configuration
+  lambda_function_arns        = module.lambda.function_arns
+  lambda_function_invoke_arns = module.lambda.function_invoke_arns
+
+  # Authentication Configuration
+  cognito_user_pool_arn              = module.auth.user_pool_arn
+  jwt_authorizer_function_arn        = module.lambda.jwt_authorizer_function_arn
+  jwt_authorizer_function_invoke_arn = module.lambda.jwt_authorizer_function_invoke_arn
+
+  # Security Configuration
+  allowed_ip_ranges = var.api_allowed_ip_ranges
+  cors_allow_origin = var.cors_allow_origin
+
+  # Rate Limiting Configuration
+  throttling_rate_limit  = var.api_throttling_rate_limit
+  throttling_burst_limit = var.api_throttling_burst_limit
+
+  # Usage Plans Configuration
+  basic_plan_quota_limit   = var.api_basic_plan_quota_limit
+  basic_plan_rate_limit    = var.api_basic_plan_rate_limit
+  premium_plan_quota_limit = var.api_premium_plan_quota_limit
+  premium_plan_rate_limit  = var.api_premium_plan_rate_limit
+
+  # Frontend Proxy Configuration (for SSL through API Gateway)
+  alb_dns_name = var.enable_ecs ? module.alb[0].alb_dns_name : ""
+
+  # Monitoring Configuration
+  log_retention_days  = var.log_retention_days
+  enable_xray_tracing = var.enable_enhanced_monitoring
+  kms_key_arn         = module.storage.kms_key_arn
+
+  tags = local.common_tags
+
+  depends_on = [module.lambda, module.auth, module.alb]
+}
+

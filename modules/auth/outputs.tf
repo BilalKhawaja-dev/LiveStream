@@ -33,3 +33,13 @@ output "user_pool_endpoint" {
   description = "Cognito User Pool endpoint"
   value       = aws_cognito_user_pool.main.endpoint
 }
+
+output "jwt_secret_arn" {
+  description = "JWT secret ARN in Secrets Manager"
+  value       = aws_secretsmanager_secret.jwt_secret.arn
+}
+
+output "jwt_secret_name" {
+  description = "JWT secret name in Secrets Manager"
+  value       = aws_secretsmanager_secret.jwt_secret.name
+}
