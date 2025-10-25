@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fafafa;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: white;
+            border-left: 4px solid #007bff;
+        }
+        .system-message {
+            border-left-color: #28a745;
+            background-color: #f8fff9;
+        }
+        .moderation-message {
+            border-left-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        input, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input {
+            flex: 1;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Chat Test</h1>
+        <p>Test the real-time chat functionality with AI moderation</p>
+        
+        <div class="form-group">
+            <label for="userId">User ID:</label>
+            <input type="text" id="userId" value="test-user-123" placeholder="Enter your user ID">
+        </div>
+        
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" value="TestUser" placeholder="Enter your username">
+        </div>
+        
+        <div class="form-group">
+            <label for="streamId">Stream ID:</label>
+            <input type="text" id="streamId" value="test-stream-456" placeholder="Enter stream ID">
+        </div>
+        
+        <div class="input-group">
+            <button id="connectBtn" onclick="connect()">Connect to Chat</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div id="chatMessages" class="chat-messages"></div>
+        
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type your message..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Test Messages:</h3>
+            <button onclick="sendTestMessage('Hello everyone!')">Send Normal Message</button>
+            <button onclick="sendTestMessage('This is spam content')">Send Spam (should be blocked)</button>
+            <button onclick="sendTestMessage('My email is test@example.com')">Send PII (should be blocked)</button>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        const wsEndpoint = 'wss://8vtb7is929.execute-api.eu-west-2.amazonaws.com/dev';
+        
+        function updateStatus(message, className) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+        
+        function addMessage(message, type = 'normal') {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type === 'system' ? 'system-message' : type === 'moderation' ? 'moderation-message' : ''}`;
+            
+            if (typeof message === 'string') {
+                messageDiv.textContent = message;
+            } else {
+                const timestamp = new Date(message.timestamp).toLocaleTimeString();
+                messageDiv.innerHTML = `
+                    <strong>${message.username || 'System'}:</strong> ${message.message}
+                    <small style="float: right; color: #666;">${timestamp}</small>
+                `;
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function connect() {
+            const userId = document.getElementById('userId').value;
+            const username = document.getElementById('username').value;
+            const streamId = document.getElementById('streamId').value;
+            
+            if (!userId || !username || !streamId) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            updateStatus('Connecting...', 'connecting');
+            
+            const wsUrl = `${wsEndpoint}?userId=${encodeURIComponent(userId)}&username=${encodeURIComponent(username)}&streamId=${encodeURIComponent(streamId)}`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                updateStatus('Connected', 'connected');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('messageInput').disabled = false;
+                document.getElementById('sendBtn').disabled = false;
+                addMessage('Connected to chat!', 'system');
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Received message:', data);
+                    
+                    if (data.type === 'system') {
+                        addMessage(data.message, 'system');
+                    } else if (data.type === 'moderation') {
+                        addMessage(data.message, 'moderation');
+                    } else if (data.type === 'message') {
+                        addMessage(data);
+                    } else if (data.type === 'user_left') {
+                        addMessage(data.message, 'system');
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                    addMessage('Received invalid message format', 'system');
+                }
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('Disconnected', 'disconnected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('messageInput').disabled = true;
+                document.getElementById('sendBtn').disabled = true;
+                addMessage('Disconnected from chat', 'system');
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateStatus('Connection Error', 'disconnected');
+                addMessage('Connection error occurred', 'system');
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                return;
+            }
+            
+            sendTestMessage(message);
+            messageInput.value = '';
+        }
+        
+        function sendTestMessage(message) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected to chat');
+                return;
+            }
+            
+            const userId = document.getElementById('userId').value;
+            const username = document.getElementById('username').value;
+            const streamId = document.getElementById('streamId').value;
+            
+            const messageData = {
+                action: 'message',
+                streamId: streamId,
+                userId: userId,
+                username: username,
+                message: message
+            };
+            
+            console.log('Sending message:', messageData);
+            ws.send(JSON.stringify(messageData));
+        }
+        
+        // Allow sending message with Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

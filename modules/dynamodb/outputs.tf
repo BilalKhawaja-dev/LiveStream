@@ -221,6 +221,11 @@ output "messages_table_name" {
   value       = aws_dynamodb_table.messages.name
 }
 
+output "messages_table_arn" {
+  description = "Chat messages table ARN"
+  value       = aws_dynamodb_table.messages.arn
+}
+
 output "users_table_name" {
   description = "Users table name"
   value       = aws_dynamodb_table.users.name
@@ -229,4 +234,24 @@ output "users_table_name" {
 output "streams_table_name" {
   description = "Streams table name"
   value       = aws_dynamodb_table.streams.name
+}
+
+output "videos_table_name" {
+  description = "Videos table name"
+  value       = aws_dynamodb_table.videos.name
+}
+
+output "videos_table_arn" {
+  description = "Videos table ARN"
+  value       = aws_dynamodb_table.videos.arn
+}
+
+output "moderation_table_name" {
+  description = "Moderation table name"
+  value       = aws_dynamodb_table.moderation.name
+}
+
+output "moderation_table_arn" {
+  description = "Moderation table ARN"
+  value       = aws_dynamodb_table.moderation.arn
 }

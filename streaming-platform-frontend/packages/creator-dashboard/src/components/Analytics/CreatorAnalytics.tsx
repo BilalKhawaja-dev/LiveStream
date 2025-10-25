@@ -35,8 +35,8 @@ import {
   ChatBubbleLeftIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   CalendarIcon,
 } from '@heroicons/react/24/outline';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
@@ -52,7 +52,7 @@ import {
   Tooltip as ChartTooltip,
   Legend,
 } from 'chart.js';
-import { useAuth } from '@streaming/auth';
+import { useAuth } from '../../stubs/auth';
 
 ChartJS.register(
   CategoryScale,
@@ -233,7 +233,7 @@ export const CreatorAnalytics: React.FC = () => {
       // Data would be fetched based on timeRange
     } catch (error) {
       // Use secure logging to prevent log injection
-      import('@streaming/shared').then(({ secureLogger }) => {
+      import('../../stubs/shared').then(({ secureLogger }) => {
         secureLogger.error('Error loading analytics', error, { 
           component: 'CreatorAnalytics',
           action: 'loadAnalyticsData' 

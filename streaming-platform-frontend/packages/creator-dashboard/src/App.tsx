@@ -1,39 +1,50 @@
+import "./styles/creator-theme.css";
 import React from 'react';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '@streaming/auth';
-import { theme } from '@streaming/ui';
-import { AppLayout, ErrorBoundary } from '@streaming/ui';
-import { CreatorAnalytics } from './components/Analytics/CreatorAnalytics';
-import { StreamHealth } from './components/Stream/StreamHealth';
-import { ContentManager } from './components/Content/ContentManager';
+import { AuthProvider } from './stubs/auth';
+import { ErrorBoundary, AppLayout } from './stubs/ui';
+import { EnhancedCreatorAnalytics } from './components/Analytics/EnhancedCreatorAnalytics';
+import { StreamControls } from './components/Stream/StreamControls';
 import { RevenueTracking } from './components/Revenue/RevenueTracking';
 
-function App() {
+const theme = extendTheme({
+  colors: {
+    brand: {
+      50: '#e3f2fd',
+      500: '#2196f3',
+      900: '#0d47a1',
+    },
+  },
+});
+
+const Dashboard: React.FC = () => {
+  return (
+    <div style={{ padding: '2rem', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <h1 style={{ color: '#333', marginBottom: '2rem', fontSize: '2rem', fontWeight: 'bold' }}>
+        Creator Dashboard
+      </h1>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <EnhancedCreatorAnalytics />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+          <StreamControls />
+          <RevenueTracking />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const App: React.FC = () => {
   return (
     <ChakraProvider theme={theme}>
-      <ErrorBoundary
-        onError={(error, errorInfo) => {
-          // Log to monitoring service
-          // Use secure logging to prevent log injection
-          import('@streaming/shared').then(({ secureLogger }) => {
-            secureLogger.error('Creator Dashboard Error', error, { 
-              component: 'CreatorDashboard',
-              errorInfo: errorInfo?.componentStack 
-            });
-          });
-          // Send to error tracking service in production
-        }}
-      >
+      <ErrorBoundary>
         <AuthProvider>
           <Router>
             <AppLayout>
               <Routes>
-                <Route path="/" element={<CreatorAnalytics />} />
-                <Route path="/analytics" element={<CreatorAnalytics />} />
-                <Route path="/stream" element={<StreamHealth />} />
-                <Route path="/content" element={<ContentManager />} />
-                <Route path="/revenue" element={<RevenueTracking />} />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/creator-dashboard/*" element={<Dashboard />} />
               </Routes>
             </AppLayout>
           </Router>
@@ -41,6 +52,6 @@ function App() {
       </ErrorBoundary>
     </ChakraProvider>
   );
-}
+};
 
 export default App;

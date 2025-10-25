@@ -4,7 +4,10 @@ resource "aws_apigatewayv2_api" "chat" {
   protocol_type              = "WEBSOCKET"
   route_selection_expression = "$request.body.action"
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "websocket-api"
+  })
 }
 
 # WebSocket routes
@@ -24,6 +27,79 @@ resource "aws_apigatewayv2_route" "message" {
   api_id    = aws_apigatewayv2_api.chat.id
   route_key = "message"
   target    = "integrations/${aws_apigatewayv2_integration.message.id}"
+}
+
+# IAM role for chat Lambda functions
+resource "aws_iam_role" "chat_lambda_role" {
+  name = "${var.project_name}-${var.environment}-chat-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "iam-role"
+  })
+}
+
+# IAM policy for chat Lambda functions
+resource "aws_iam_role_policy" "chat_lambda_policy" {
+  name = "${var.project_name}-${var.environment}-chat-lambda-policy"
+  role = aws_iam_role.chat_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:*:*:table/${var.connections_table_name}",
+          "arn:aws:dynamodb:*:*:table/${var.messages_table_name}"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "execute-api:ManageConnections"
+        ]
+        Resource = "arn:aws:execute-api:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "comprehend:DetectSentiment",
+          "comprehend:DetectPiiEntities"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 # Lambda integrations
@@ -48,127 +124,28 @@ resource "aws_apigatewayv2_integration" "message" {
 # Lambda function source code
 data "archive_file" "chat_connect" {
   type        = "zip"
-  output_path = "chat_connect.zip"
-
-  source {
-    content  = <<EOF
-import json
-import boto3
-
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('${var.connections_table_name}')
-
-def handler(event, context):
-    connection_id = event['requestContext']['connectionId']
-    
-    try:
-        table.put_item(
-            Item={
-                'connection_id': connection_id,
-                'expires_at': int(context.get_remaining_time_in_millis() / 1000) + 3600
-            }
-        )
-        return {'statusCode': 200}
-    except Exception as e:
-        return {'statusCode': 500, 'body': str(e)}
-EOF
-    filename = "index.py"
-  }
+  output_path = "${path.module}/chat_connect.zip"
+  source_file = "${path.module}/functions/chat_connect.py"
 }
 
 data "archive_file" "chat_disconnect" {
   type        = "zip"
-  output_path = "chat_disconnect.zip"
-
-  source {
-    content  = <<EOF
-import json
-import boto3
-
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('${var.connections_table_name}')
-
-def handler(event, context):
-    connection_id = event['requestContext']['connectionId']
-    
-    try:
-        table.delete_item(Key={'connection_id': connection_id})
-        return {'statusCode': 200}
-    except Exception as e:
-        return {'statusCode': 500, 'body': str(e)}
-EOF
-    filename = "index.py"
-  }
+  output_path = "${path.module}/chat_disconnect.zip"
+  source_file = "${path.module}/functions/chat_disconnect.py"
 }
 
 data "archive_file" "chat_message" {
   type        = "zip"
-  output_path = "chat_message.zip"
-
-  source {
-    content  = <<EOF
-import json
-import boto3
-from datetime import datetime
-
-dynamodb = boto3.resource('dynamodb')
-connections_table = dynamodb.Table('${var.connections_table_name}')
-messages_table = dynamodb.Table('${var.messages_table_name}')
-
-apigw = boto3.client('apigatewaymanagementapi',
-    endpoint_url=f"https://{event['requestContext']['domainName']}/{event['requestContext']['stage']}")
-
-def handler(event, context):
-    try:
-        body = json.loads(event['body'])
-        
-        # Store message
-        messages_table.put_item(
-            Item={
-                'stream_id': body['streamId'],
-                'timestamp': datetime.now().isoformat(),
-                'user_id': body['userId'],
-                'username': body['username'],
-                'message': body['message'],
-                'expires_at': int(datetime.now().timestamp()) + 86400
-            }
-        )
-        
-        # Broadcast to all connections
-        connections = connections_table.scan()['Items']
-        
-        for connection in connections:
-            try:
-                apigw.post_to_connection(
-                    ConnectionId=connection['connection_id'],
-                    Data=json.dumps({
-                        'type': 'message',
-                        'id': f"{body['streamId']}-{datetime.now().timestamp()}",
-                        'userId': body['userId'],
-                        'username': body['username'],
-                        'message': body['message'],
-                        'timestamp': datetime.now().isoformat(),
-                        'streamId': body['streamId']
-                    })
-                )
-            except:
-                # Remove stale connection
-                connections_table.delete_item(Key={'connection_id': connection['connection_id']})
-        
-        return {'statusCode': 200}
-    except Exception as e:
-        return {'statusCode': 500, 'body': str(e)}
-EOF
-    filename = "index.py"
-  }
+  output_path = "${path.module}/chat_message.zip"
+  source_file = "${path.module}/functions/chat_message.py"
 }
 
 # Lambda functions for chat
 resource "aws_lambda_function" "chat_connect" {
   filename         = data.archive_file.chat_connect.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-connect"
-  role             = var.lambda_role_arn
-  handler          = "index.handler"
+  role             = aws_iam_role.chat_lambda_role.arn
+  handler          = "chat_connect.lambda_handler"
   runtime          = "python3.9"
   timeout          = 30
   source_code_hash = data.archive_file.chat_connect.output_base64sha256
@@ -179,14 +156,17 @@ resource "aws_lambda_function" "chat_connect" {
     }
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "lambda-function"
+  })
 }
 
 resource "aws_lambda_function" "chat_disconnect" {
   filename         = data.archive_file.chat_disconnect.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-disconnect"
-  role             = var.lambda_role_arn
-  handler          = "index.handler"
+  role             = aws_iam_role.chat_lambda_role.arn
+  handler          = "chat_disconnect.lambda_handler"
   runtime          = "python3.9"
   timeout          = 30
   source_code_hash = data.archive_file.chat_disconnect.output_base64sha256
@@ -197,16 +177,19 @@ resource "aws_lambda_function" "chat_disconnect" {
     }
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "lambda-function"
+  })
 }
 
 resource "aws_lambda_function" "chat_message" {
   filename         = data.archive_file.chat_message.output_path
   function_name    = "${var.project_name}-${var.environment}-chat-message"
-  role             = var.lambda_role_arn
-  handler          = "index.handler"
+  role             = aws_iam_role.chat_lambda_role.arn
+  handler          = "chat_message.lambda_handler"
   runtime          = "python3.9"
-  timeout          = 30
+  timeout          = 60
   source_code_hash = data.archive_file.chat_message.output_base64sha256
 
   environment {
@@ -216,7 +199,10 @@ resource "aws_lambda_function" "chat_message" {
     }
   }
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "lambda-function"
+  })
 }
 
 # API Gateway deployment
@@ -235,5 +221,64 @@ resource "aws_apigatewayv2_stage" "chat" {
   deployment_id = aws_apigatewayv2_deployment.chat.id
   name          = var.environment
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "api-stage"
+  })
+}
+
+# Lambda permissions for API Gateway
+resource "aws_lambda_permission" "chat_connect_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.chat_connect.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.chat.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "chat_disconnect_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.chat_disconnect.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.chat.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "chat_message_permission" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.chat_message.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.chat.execution_arn}/*/*"
+}
+
+# CloudWatch Log Groups for Lambda functions
+resource "aws_cloudwatch_log_group" "chat_connect_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.chat_connect.function_name}"
+  retention_in_days = 7
+
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "log-group"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "chat_disconnect_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.chat_disconnect.function_name}"
+  retention_in_days = 7
+
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "log-group"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "chat_message_logs" {
+  name              = "/aws/lambda/${aws_lambda_function.chat_message.function_name}"
+  retention_in_days = 7
+
+  tags = merge(var.tags, {
+    Service = "chat"
+    Type    = "log-group"
+  })
 }

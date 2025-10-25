@@ -135,21 +135,21 @@ output "ecs_service_names" {
   description = "List of ECS service names"
   value       = var.enable_ecs ? module.ecs[0].ecs_service_names : []
 } # A
-# API Gateway Outputs
-output "api_gateway_url" {
-  description = "API Gateway invoke URL"
-  value       = module.api_gateway.api_gateway_invoke_url
-}
-
-output "api_gateway_id" {
-  description = "API Gateway REST API ID"
-  value       = module.api_gateway.api_gateway_id
-}
-
-output "api_gateway_stage" {
-  description = "API Gateway stage name"
-  value       = module.api_gateway.api_gateway_stage_name
-}
+# API Gateway Outputs (COMMENTED OUT FOR DESTROY)
+# output "api_gateway_url" {
+#   description = "API Gateway invoke URL"
+#   value       = module.api_gateway.api_gateway_invoke_url
+# }
+#
+# output "api_gateway_id" {
+#   description = "API Gateway REST API ID"
+#   value       = module.api_gateway.api_gateway_id
+# }
+#
+# output "api_gateway_stage" {
+#   description = "API Gateway stage name"
+#   value       = module.api_gateway.api_gateway_stage_name
+# }
 
 # Lambda Function Information
 output "lambda_functions" {
@@ -171,54 +171,99 @@ output "cognito_config" {
   }
 }
 
-# Frontend Environment Variables
-output "frontend_env_vars" {
-  description = "Environment variables for frontend applications"
-  value = {
-    REACT_APP_API_BASE_URL                = module.api_gateway.api_gateway_invoke_url
-    REACT_APP_COGNITO_USER_POOL_ID        = module.auth.user_pool_id
-    REACT_APP_COGNITO_USER_POOL_CLIENT_ID = module.auth.user_pool_client_id
-    REACT_APP_AWS_REGION                  = var.aws_region
-    REACT_APP_ENVIRONMENT                 = var.environment
-  }
+# Frontend Environment Variables (COMMENTED OUT FOR DESTROY)
+# output "frontend_env_vars" {
+#   description = "Environment variables for frontend applications"
+#   value = {
+#     REACT_APP_API_BASE_URL                = module.api_gateway.api_gateway_invoke_url
+#     REACT_APP_COGNITO_USER_POOL_ID        = module.auth.user_pool_id
+#     REACT_APP_COGNITO_USER_POOL_CLIENT_ID = module.auth.user_pool_client_id
+#     REACT_APP_AWS_REGION                  = var.aws_region
+#     REACT_APP_ENVIRONMENT                 = var.environment
+#   }
+# }
+
+# Application Access URLs (COMMENTED OUT FOR DESTROY)
+# output "application_urls" {
+#   description = "URLs to access the applications"
+#   value = {
+#     # Frontend applications (via HTTPS through API Gateway)
+#     frontend_https_url = "${module.api_gateway.api_gateway_invoke_url}/"
+#
+#     # Backend API endpoints
+#     api_base_url = "${module.api_gateway.api_gateway_invoke_url}/api"
+#     auth_endpoints = {
+#       login    = "${module.api_gateway.api_gateway_invoke_url}/auth/login"
+#       register = "${module.api_gateway.api_gateway_invoke_url}/auth/register"
+#       refresh  = "${module.api_gateway.api_gateway_invoke_url}/auth/refresh"
+#     }
+#
+#     # Direct ALB access (HTTP only, for development)
+#     alb_http_url = var.enable_ecs ? "http://${module.alb[0].alb_dns_name}/" : "Not deployed"
+#   }
+# }
+
+# Chat WebSocket Information
+output "websocket_api_endpoint" {
+  description = "WebSocket API endpoint for real-time chat"
+  value       = module.chat.websocket_api_endpoint
 }
 
-# Application Access URLs
-output "application_urls" {
-  description = "URLs to access the applications"
-  value = {
-    # Frontend applications (via HTTPS through API Gateway)
-    frontend_https_url = "${module.api_gateway.api_gateway_invoke_url}/"
-
-    # Backend API endpoints
-    api_base_url = "${module.api_gateway.api_gateway_invoke_url}/api"
-    auth_endpoints = {
-      login    = "${module.api_gateway.api_gateway_invoke_url}/auth/login"
-      register = "${module.api_gateway.api_gateway_invoke_url}/auth/register"
-      refresh  = "${module.api_gateway.api_gateway_invoke_url}/auth/refresh"
-    }
-
-    # Direct ALB access (HTTP only, for development)
-    alb_http_url = var.enable_ecs ? "http://${module.alb[0].alb_dns_name}/" : "Not deployed"
-  }
+output "websocket_api_id" {
+  description = "WebSocket API ID"
+  value       = module.chat.websocket_api_id
 }
 
-# Deployment Summary
-output "deployment_summary" {
-  description = "Summary of what has been deployed"
-  value = {
-    infrastructure_status = "✅ Complete"
-    frontend_status       = var.enable_ecs ? "✅ Deployed" : "❌ Disabled"
-    backend_api_status    = "✅ Deployed"
-    database_status       = var.enable_aurora ? "✅ Deployed" : "❌ Disabled"
-    ssl_solution          = "✅ API Gateway provides HTTPS"
+# Deployment Summary (COMMENTED OUT FOR DESTROY)
+# output "deployment_summary" {
+#   description = "Summary of what has been deployed"
+#   value = {
+#     infrastructure_status = "✅ Complete"
+#     frontend_status       = var.enable_ecs ? "✅ Deployed" : "❌ Disabled"
+#     backend_api_status    = "✅ Deployed"
+#     database_status       = var.enable_aurora ? "✅ Deployed" : "❌ Disabled"
+#     websocket_chat_status = "✅ Deployed"
+#     ssl_solution          = "✅ API Gateway provides HTTPS"
+#
+#     next_steps = [
+#       "1. Update frontend AuthProvider to use real Cognito (remove mock data)",
+#       "2. Test authentication: ${module.api_gateway.api_gateway_invoke_url}/auth/login",
+#       "3. Access frontend via HTTPS: ${module.api_gateway.api_gateway_invoke_url}/",
+#       "4. Test WebSocket chat: ${module.chat.websocket_api_endpoint}",
+#       "5. Check CloudWatch logs for any issues",
+#       var.enable_aurora ? "6. Database is ready with schema" : "6. Enable Aurora in terraform.tfvars for full functionality"
+#     ]
+#   }
+# }
 
-    next_steps = [
-      "1. Update frontend AuthProvider to use real Cognito (remove mock data)",
-      "2. Test authentication: ${module.api_gateway.api_gateway_invoke_url}/auth/login",
-      "3. Access frontend via HTTPS: ${module.api_gateway.api_gateway_invoke_url}/",
-      "4. Check CloudWatch logs for any issues",
-      var.enable_aurora ? "5. Database is ready with schema" : "5. Enable Aurora in terraform.tfvars for full functionality"
-    ]
-  }
+# Video Processing Information
+output "video_upload_bucket_name" {
+  description = "Name of the video upload bucket"
+  value       = module.video_processing.upload_bucket_name
+}
+
+output "video_cdn_domain_name" {
+  description = "CloudFront distribution domain name for videos"
+  value       = module.video_processing.cdn_domain_name
+}
+
+output "presigned_url_generator_function_name" {
+  description = "Name of the presigned URL generator Lambda function"
+  value       = module.video_processing.presigned_url_generator_function_name
+}
+
+# Content Moderation Information
+output "content_analyzer_function_name" {
+  description = "Name of the content analyzer Lambda function"
+  value       = module.content_moderation.content_analyzer_function_name
+}
+
+output "moderation_api_function_name" {
+  description = "Name of the moderation API Lambda function"
+  value       = module.content_moderation.moderation_api_function_name
+}
+
+output "moderation_alerts_topic_arn" {
+  description = "ARN of the moderation alerts SNS topic"
+  value       = module.content_moderation.moderation_alerts_topic_arn
 }

@@ -97,6 +97,9 @@ module "aurora" {
   backup_window           = var.aurora_preferred_backup_window
   maintenance_window      = var.aurora_preferred_maintenance_window
 
+  # Lambda layer for dependencies
+  shared_dependencies_layer_arn = module.lambda.shared_dependencies_layer_arn
+
   depends_on = [module.vpc]
 }
 
@@ -445,46 +448,104 @@ module "lambda" {
   depends_on = [module.vpc, module.auth, module.storage, module.dynamodb]
 }
 
-# API Gateway REST Module - Backend API
-module "api_gateway" {
-  source = "./modules/api_gateway_rest"
+# API Gateway REST Module - Backend API (COMMENTED OUT FOR DESTROY)
+# module "api_gateway" {
+#   source = "./modules/api_gateway_rest"
+#
+#   project_name = var.project_name
+#   environment  = var.environment
+#
+#   # Lambda Function Configuration
+#   lambda_function_arns        = module.lambda.function_arns
+#   lambda_function_invoke_arns = module.lambda.function_invoke_arns
+#
+#   # Authentication Configuration
+#   cognito_user_pool_arn              = module.auth.user_pool_arn
+#   jwt_authorizer_function_arn        = module.lambda.jwt_authorizer_function_arn
+#   jwt_authorizer_function_invoke_arn = module.lambda.jwt_authorizer_function_invoke_arn
+#
+#   # Security Configuration
+#   allowed_ip_ranges = var.api_allowed_ip_ranges
+#   cors_allow_origin = var.cors_allow_origin
+#
+#   # Rate Limiting Configuration
+#   throttling_rate_limit  = var.api_throttling_rate_limit
+#   throttling_burst_limit = var.api_throttling_burst_limit
+#
+#   # Usage Plans Configuration
+#   basic_plan_quota_limit   = var.api_basic_plan_quota_limit
+#   basic_plan_rate_limit    = var.api_basic_plan_rate_limit
+#   premium_plan_quota_limit = var.api_premium_plan_quota_limit
+#   premium_plan_rate_limit  = var.api_premium_plan_rate_limit
+#
+#   # Frontend Proxy Configuration (for SSL through API Gateway)
+#   alb_dns_name = var.enable_ecs ? module.alb[0].alb_dns_name : ""
+#
+#   # Monitoring Configuration
+#   log_retention_days  = var.log_retention_days
+#   enable_xray_tracing = var.enable_enhanced_monitoring
+#   kms_key_arn         = module.storage.kms_key_arn
+#
+#   tags = local.common_tags
+#
+#   depends_on = [module.lambda, module.auth, module.alb]
+# }
+
+# Chat Module - WebSocket API for real-time chat
+module "chat" {
+  source = "./modules/chat"
 
   project_name = var.project_name
   environment  = var.environment
 
-  # Lambda Function Configuration
-  lambda_function_arns        = module.lambda.function_arns
-  lambda_function_invoke_arns = module.lambda.function_invoke_arns
-
-  # Authentication Configuration
-  cognito_user_pool_arn              = module.auth.user_pool_arn
-  jwt_authorizer_function_arn        = module.lambda.jwt_authorizer_function_arn
-  jwt_authorizer_function_invoke_arn = module.lambda.jwt_authorizer_function_invoke_arn
-
-  # Security Configuration
-  allowed_ip_ranges = var.api_allowed_ip_ranges
-  cors_allow_origin = var.cors_allow_origin
-
-  # Rate Limiting Configuration
-  throttling_rate_limit  = var.api_throttling_rate_limit
-  throttling_burst_limit = var.api_throttling_burst_limit
-
-  # Usage Plans Configuration
-  basic_plan_quota_limit   = var.api_basic_plan_quota_limit
-  basic_plan_rate_limit    = var.api_basic_plan_rate_limit
-  premium_plan_quota_limit = var.api_premium_plan_quota_limit
-  premium_plan_rate_limit  = var.api_premium_plan_rate_limit
-
-  # Frontend Proxy Configuration (for SSL through API Gateway)
-  alb_dns_name = var.enable_ecs ? module.alb[0].alb_dns_name : ""
-
-  # Monitoring Configuration
-  log_retention_days  = var.log_retention_days
-  enable_xray_tracing = var.enable_enhanced_monitoring
-  kms_key_arn         = module.storage.kms_key_arn
+  # DynamoDB Configuration
+  connections_table_name = module.dynamodb.connections_table_name
+  messages_table_name    = module.dynamodb.messages_table_name
 
   tags = local.common_tags
 
-  depends_on = [module.lambda, module.auth, module.alb]
+  depends_on = [module.dynamodb]
 }
 
+# Video Processing Module - Video upload, transcoding, and CDN delivery
+module "video_processing" {
+  source = "./modules/video_processing"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # DynamoDB Configuration
+  videos_table_name = module.dynamodb.videos_table_name
+  videos_table_arn  = module.dynamodb.videos_table_arn
+
+  tags = local.common_tags
+
+  depends_on = [module.dynamodb]
+}
+
+# Content Moderation Module - AI-powered content analysis and moderation
+module "content_moderation" {
+  source = "./modules/content_moderation"
+
+  project_name = var.project_name
+  environment  = var.environment
+
+  # DynamoDB Configuration
+  moderation_table_name = module.dynamodb.moderation_table_name
+  moderation_table_arn  = module.dynamodb.moderation_table_arn
+  videos_table_name     = module.dynamodb.videos_table_name
+  videos_table_arn      = module.dynamodb.videos_table_arn
+  messages_table_name   = module.dynamodb.messages_table_name
+  messages_table_arn    = module.dynamodb.messages_table_arn
+
+  # S3 Configuration
+  video_upload_bucket_arn     = module.video_processing.upload_bucket_arn
+  processed_videos_bucket_arn = module.video_processing.processed_bucket_arn
+
+  # Notification Configuration
+  moderation_email = "admin@${var.domain_name != "" ? var.domain_name : "example.com"}"
+
+  tags = local.common_tags
+
+  depends_on = [module.dynamodb, module.video_processing]
+}

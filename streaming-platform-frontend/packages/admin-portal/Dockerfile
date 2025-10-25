@@ -1,16 +1,40 @@
+# Multi-stage build for admin-portal
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage
 FROM nginx:alpine
 
-# Copy built application  
-COPY dist/ /usr/share/nginx/html/
+# Install curl for health checks
+RUN apk add --no-cache curl
 
-# Copy nginx configuration
+# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose the application port
+# Copy built application
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Create health check script
+RUN echo '#!/bin/sh' > /health-check.sh &&     echo 'curl -f http://localhost:3002/health || exit 1' >> /health-check.sh &&     chmod +x /health-check.sh
+
+# Expose port
 EXPOSE 3002
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3     CMD /health-check.sh
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -39,15 +39,18 @@ resource "aws_lambda_function" "auth_handler" {
       COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       COGNITO_CLIENT_ID    = var.cognito_client_id
       JWT_SECRET_ARN       = var.jwt_secret_arn
+      AURORA_CLUSTER_ARN   = var.aurora_cluster_arn
+      AURORA_SECRET_ARN    = var.aurora_secret_arn
       ENVIRONMENT          = var.environment
       LOG_LEVEL            = var.log_level
     }
   }
 
-  vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [var.lambda_security_group_id]
-  }
+  # Remove VPC config for auth handler to improve cold start performance
+  # vpc_config {
+  #   subnet_ids         = var.private_subnet_ids
+  #   security_group_ids = [var.lambda_security_group_id]
+  # }
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_auth_vpc,
@@ -750,10 +753,11 @@ resource "aws_lambda_function" "jwt_middleware" {
 
   source_code_hash = data.archive_file.jwt_middleware.output_base64sha256
 
-  vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [var.lambda_security_group_id]
-  }
+  # Remove VPC config for JWT middleware to improve performance
+  # vpc_config {
+  #   subnet_ids         = var.private_subnet_ids
+  #   security_group_ids = [var.lambda_security_group_id]
+  # }
 
   environment {
     variables = {

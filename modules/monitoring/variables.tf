@@ -271,3 +271,233 @@ variable "allowed_origins" {
     error_message = "All origins must use HTTPS protocol."
   }
 }
+
+# Streaming Platform Specific Variables
+variable "alb_name" {
+  description = "Application Load Balancer name for monitoring"
+  type        = string
+  default     = ""
+}
+
+variable "medialive_channel_id" {
+  description = "MediaLive channel ID for monitoring"
+  type        = string
+  default     = ""
+}
+
+variable "s3_media_bucket_name" {
+  description = "S3 media bucket name for monitoring"
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for monitoring"
+  type        = string
+  default     = ""
+}
+
+variable "websocket_api_id" {
+  description = "WebSocket API Gateway ID for monitoring"
+  type        = string
+  default     = ""
+}
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for monitoring"
+  type        = string
+  default     = ""
+}
+
+# ECS Monitoring Configuration
+variable "enable_ecs_monitoring" {
+  description = "Enable ECS service monitoring and alarms"
+  type        = bool
+  default     = true
+}
+
+variable "ecs_cpu_threshold" {
+  description = "CPU utilization threshold for ECS alarms"
+  type        = number
+  default     = 80
+  validation {
+    condition     = var.ecs_cpu_threshold > 0 && var.ecs_cpu_threshold <= 100
+    error_message = "ECS CPU threshold must be between 1 and 100."
+  }
+}
+
+variable "ecs_memory_threshold" {
+  description = "Memory utilization threshold for ECS alarms"
+  type        = number
+  default     = 85
+  validation {
+    condition     = var.ecs_memory_threshold > 0 && var.ecs_memory_threshold <= 100
+    error_message = "ECS memory threshold must be between 1 and 100."
+  }
+}
+
+# Lambda Monitoring Configuration
+variable "enable_lambda_monitoring" {
+  description = "Enable Lambda function monitoring and alarms"
+  type        = bool
+  default     = true
+}
+
+variable "lambda_error_threshold" {
+  description = "Error count threshold for Lambda alarms"
+  type        = number
+  default     = 5
+}
+
+variable "lambda_duration_threshold" {
+  description = "Duration threshold for Lambda alarms in milliseconds"
+  type        = number
+  default     = 10000
+}
+
+# API Gateway Monitoring Configuration
+variable "enable_api_monitoring" {
+  description = "Enable API Gateway monitoring and alarms"
+  type        = bool
+  default     = true
+}
+
+variable "api_4xx_error_threshold" {
+  description = "4XX error count threshold for API Gateway alarms"
+  type        = number
+  default     = 20
+}
+
+variable "api_5xx_error_threshold" {
+  description = "5XX error count threshold for API Gateway alarms"
+  type        = number
+  default     = 5
+}
+
+variable "api_latency_threshold" {
+  description = "Latency threshold for API Gateway alarms in milliseconds"
+  type        = number
+  default     = 5000
+}
+
+# Database Monitoring Configuration
+variable "enable_database_monitoring" {
+  description = "Enable database monitoring and alarms"
+  type        = bool
+  default     = true
+}
+
+variable "aurora_connection_threshold" {
+  description = "Connection count threshold for Aurora alarms"
+  type        = number
+  default     = 80
+}
+
+variable "aurora_cpu_threshold" {
+  description = "CPU utilization threshold for Aurora alarms"
+  type        = number
+  default     = 80
+}
+
+variable "dynamodb_throttle_threshold" {
+  description = "Throttle count threshold for DynamoDB alarms"
+  type        = number
+  default     = 0
+}
+
+# Streaming Services Monitoring
+variable "enable_streaming_monitoring" {
+  description = "Enable streaming services monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "medialive_error_threshold" {
+  description = "Error count threshold for MediaLive alarms"
+  type        = number
+  default     = 1
+}
+
+variable "websocket_error_threshold" {
+  description = "Error count threshold for WebSocket API alarms"
+  type        = number
+  default     = 10
+}
+
+# Notification Configuration
+variable "enable_slack_notifications" {
+  description = "Enable Slack notifications for alerts"
+  type        = bool
+  default     = false
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for notifications"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_pagerduty_integration" {
+  description = "Enable PagerDuty integration for critical alerts"
+  type        = bool
+  default     = false
+}
+
+variable "pagerduty_integration_key" {
+  description = "PagerDuty integration key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+# Advanced Monitoring Features
+variable "enable_x_ray_tracing" {
+  description = "Enable AWS X-Ray tracing for distributed monitoring"
+  type        = bool
+  default     = false
+}
+
+variable "enable_container_insights" {
+  description = "Enable CloudWatch Container Insights for ECS"
+  type        = bool
+  default     = true
+}
+
+variable "enable_application_insights" {
+  description = "Enable CloudWatch Application Insights"
+  type        = bool
+  default     = false
+}
+
+# Log Analysis Configuration
+variable "enable_log_insights_queries" {
+  description = "Enable predefined CloudWatch Logs Insights queries"
+  type        = bool
+  default     = true
+}
+
+variable "log_insights_retention_days" {
+  description = "Retention period for Log Insights query results"
+  type        = number
+  default     = 7
+}
+
+# Performance Monitoring
+variable "enable_synthetic_monitoring" {
+  description = "Enable CloudWatch Synthetics for endpoint monitoring"
+  type        = bool
+  default     = false
+}
+
+variable "synthetic_canary_schedule" {
+  description = "Schedule expression for synthetic canary runs"
+  type        = string
+  default     = "rate(5 minutes)"
+}
+
+variable "monitored_endpoints" {
+  description = "List of endpoints to monitor with synthetic canaries"
+  type        = list(string)
+  default     = []
+}

@@ -16,27 +16,27 @@ variable "environment" {
 
 # Aurora cluster configuration
 variable "engine_version" {
-  description = "Aurora MySQL engine version"
+  description = "Aurora PostgreSQL engine version"
   type        = string
-  default     = "8.0.mysql_aurora.3.08.2"
+  default     = "15.4"
 }
 
 variable "database_name" {
   description = "Name of the default database to create"
   type        = string
-  default     = "streaming_logs"
+  default     = "streaming_platform"
 }
 
 variable "master_username" {
   description = "Master username for Aurora cluster"
   type        = string
-  default     = "admin"
+  default     = "dbadmin"
 }
 
 variable "port" {
   description = "Port for Aurora cluster"
   type        = number
-  default     = 3306
+  default     = 5432
 }
 
 # Serverless v2 scaling configuration
@@ -87,7 +87,7 @@ variable "deletion_protection" {
 variable "enabled_cloudwatch_logs_exports" {
   description = "List of log types to export to CloudWatch"
   type        = list(string)
-  default     = ["error", "general", "slowquery"]
+  default     = ["postgresql"]
 }
 
 variable "monitoring_interval" {
@@ -196,4 +196,10 @@ variable "aurora_security_group_id" {
 variable "aurora_subnet_group_name" {
   description = "DB subnet group name for Aurora"
   type        = string
+}
+
+variable "shared_dependencies_layer_arn" {
+  description = "ARN of the shared dependencies Lambda layer"
+  type        = string
+  default     = ""
 }

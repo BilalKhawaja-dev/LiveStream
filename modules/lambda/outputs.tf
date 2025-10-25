@@ -4,8 +4,8 @@
 output "lambda_function_arns" {
   description = "Map of Lambda function ARNs"
   value = {
-    auth_handler       = aws_lambda_function.auth_handler.arn
-    streaming_handler  = aws_lambda_function.streaming_handler.arn
+    auth_handler      = aws_lambda_function.auth_handler.arn
+    streaming_handler = aws_lambda_function.streaming_handler.arn
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_lambda_function.support_handler.arn
     analytics_handler  = aws_lambda_function.analytics_handler.arn
@@ -17,8 +17,8 @@ output "lambda_function_arns" {
 output "lambda_function_names" {
   description = "Map of Lambda function names"
   value = {
-    auth_handler       = aws_lambda_function.auth_handler.function_name
-    streaming_handler  = aws_lambda_function.streaming_handler.function_name
+    auth_handler      = aws_lambda_function.auth_handler.function_name
+    streaming_handler = aws_lambda_function.streaming_handler.function_name
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_lambda_function.support_handler.function_name
     analytics_handler  = aws_lambda_function.analytics_handler.function_name
@@ -30,8 +30,8 @@ output "lambda_function_names" {
 output "lambda_function_invoke_arns" {
   description = "Map of Lambda function invoke ARNs for API Gateway"
   value = {
-    auth_handler       = aws_lambda_function.auth_handler.invoke_arn
-    streaming_handler  = aws_lambda_function.streaming_handler.invoke_arn
+    auth_handler      = aws_lambda_function.auth_handler.invoke_arn
+    streaming_handler = aws_lambda_function.streaming_handler.invoke_arn
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_lambda_function.support_handler.invoke_arn
     analytics_handler  = aws_lambda_function.analytics_handler.invoke_arn
@@ -102,8 +102,8 @@ output "shared_dependencies_layer_arn" {
 output "lambda_role_arns" {
   description = "Map of Lambda IAM role ARNs"
   value = {
-    auth_role       = aws_iam_role.lambda_auth_role.arn
-    streaming_role  = aws_iam_role.lambda_streaming_role.arn
+    auth_role      = aws_iam_role.lambda_auth_role.arn
+    streaming_role = aws_iam_role.lambda_streaming_role.arn
     # payment_role    = DISABLED FOR DEVELOPMENT
     support_role    = aws_iam_role.lambda_support_role.arn
     analytics_role  = aws_iam_role.lambda_analytics_role.arn
@@ -115,8 +115,8 @@ output "lambda_role_arns" {
 output "lambda_log_group_names" {
   description = "Map of Lambda CloudWatch log group names"
   value = {
-    auth_handler       = aws_cloudwatch_log_group.auth_handler.name
-    streaming_handler  = aws_cloudwatch_log_group.streaming_handler.name
+    auth_handler      = aws_cloudwatch_log_group.auth_handler.name
+    streaming_handler = aws_cloudwatch_log_group.streaming_handler.name
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_cloudwatch_log_group.support_handler.name
     analytics_handler  = aws_cloudwatch_log_group.analytics_handler.name
@@ -139,8 +139,8 @@ output "jwt_authorizer_function_invoke_arn" {
 output "function_arns" {
   description = "Map of Lambda function ARNs"
   value = {
-    auth_handler       = aws_lambda_function.auth_handler.arn
-    streaming_handler  = aws_lambda_function.streaming_handler.arn
+    auth_handler      = aws_lambda_function.auth_handler.arn
+    streaming_handler = aws_lambda_function.streaming_handler.arn
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_lambda_function.support_handler.arn
     analytics_handler  = aws_lambda_function.analytics_handler.arn
@@ -152,8 +152,8 @@ output "function_arns" {
 output "function_invoke_arns" {
   description = "Map of Lambda function invoke ARNs for API Gateway"
   value = {
-    auth_handler       = aws_lambda_function.auth_handler.invoke_arn
-    streaming_handler  = aws_lambda_function.streaming_handler.invoke_arn
+    auth_handler      = aws_lambda_function.auth_handler.invoke_arn
+    streaming_handler = aws_lambda_function.streaming_handler.invoke_arn
     # payment_handler    = DISABLED FOR DEVELOPMENT
     support_handler    = aws_lambda_function.support_handler.invoke_arn
     analytics_handler  = aws_lambda_function.analytics_handler.invoke_arn
@@ -166,13 +166,13 @@ output "function_invoke_arns" {
 output "lambda_configuration_summary" {
   description = "Summary of Lambda configuration"
   value = {
-    total_functions    = 6  # Reduced from 7 (payment handler disabled)
+    total_functions    = 6 # Reduced from 7 (payment handler disabled)
     runtime            = "python3.9"
     vpc_enabled        = true
     layer_enabled      = true
     log_retention_days = var.log_retention_days
     environment        = var.environment
     project_name       = var.project_name
-    payment_disabled   = true  # Development mode
+    payment_disabled   = true # Development mode
   }
 }

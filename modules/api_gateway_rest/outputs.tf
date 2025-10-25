@@ -115,5 +115,3 @@ output "api_gateway_configuration" {
     api_keys_created = var.create_api_keys
   }
 }
-
-data "aws_region" "current" {}

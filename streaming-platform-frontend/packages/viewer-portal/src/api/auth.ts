@@ -30,7 +30,7 @@ export const authAPI = {
       
       if (accessToken) {
         localStorage.setItem('accessToken', accessToken);
-        return await this.getCurrentUser();
+        return await authAPI.getCurrentUser();
       }
       return null;
     } catch (error) {

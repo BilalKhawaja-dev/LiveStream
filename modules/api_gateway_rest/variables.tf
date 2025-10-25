@@ -189,3 +189,223 @@ variable "lambda_function_invoke_arns" {
   type        = map(string)
   default     = {}
 }
+
+# WAF Configuration
+variable "enable_waf" {
+  description = "Enable WAF for API Gateway"
+  type        = bool
+  default     = true
+}
+
+variable "waf_rate_limit" {
+  description = "WAF rate limit per 5-minute period"
+  type        = number
+  default     = 2000
+}
+
+variable "enable_geo_blocking" {
+  description = "Enable geographic blocking in WAF"
+  type        = bool
+  default     = false
+}
+
+variable "blocked_countries" {
+  description = "List of country codes to block"
+  type        = list(string)
+  default     = []
+}
+
+# Custom Domain Configuration
+variable "certificate_arn" {
+  description = "ACM certificate ARN for custom domain"
+  type        = string
+  default     = ""
+}
+
+variable "custom_domain_name" {
+  description = "Custom domain name for API Gateway"
+  type        = string
+  default     = ""
+}
+
+# Monitoring and Alerting Configuration
+variable "alarm_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarms"
+  type        = string
+  default     = ""
+}
+
+variable "api_4xx_error_threshold" {
+  description = "Threshold for 4XX error alarm"
+  type        = number
+  default     = 20
+}
+
+variable "api_5xx_error_threshold" {
+  description = "Threshold for 5XX error alarm"
+  type        = number
+  default     = 5
+}
+
+variable "api_latency_threshold" {
+  description = "Threshold for latency alarm in milliseconds"
+  type        = number
+  default     = 5000
+}
+
+variable "enable_api_dashboard" {
+  description = "Enable CloudWatch dashboard for API Gateway"
+  type        = bool
+  default     = true
+}
+
+# Usage Analytics Configuration
+variable "enable_usage_analytics" {
+  description = "Enable detailed usage analytics"
+  type        = bool
+  default     = true
+}
+
+# Advanced Security Configuration
+variable "enable_request_validation" {
+  description = "Enable request validation"
+  type        = bool
+  default     = true
+}
+
+variable "enable_response_compression" {
+  description = "Enable response compression"
+  type        = bool
+  default     = true
+}
+
+variable "minimum_compression_size" {
+  description = "Minimum response size for compression in bytes"
+  type        = number
+  default     = 1024
+}
+
+# Performance Configuration
+variable "enable_api_cache_encryption" {
+  description = "Enable API Gateway cache encryption"
+  type        = bool
+  default     = true
+}
+
+variable "cache_cluster_size" {
+  description = "API Gateway cache cluster size"
+  type        = string
+  default     = "0.5"
+  validation {
+    condition = contains([
+      "0.5", "1.6", "6.1", "13.5", "28.4", "58.2", "118", "237"
+    ], var.cache_cluster_size)
+    error_message = "Cache cluster size must be a valid API Gateway cache size."
+  }
+}
+
+# Integration Configuration
+variable "integration_timeout" {
+  description = "Integration timeout in milliseconds"
+  type        = number
+  default     = 29000
+  validation {
+    condition     = var.integration_timeout >= 50 && var.integration_timeout <= 29000
+    error_message = "Integration timeout must be between 50 and 29000 milliseconds."
+  }
+}
+
+variable "enable_integration_caching" {
+  description = "Enable integration response caching"
+  type        = bool
+  default     = false
+}
+
+# API Documentation Configuration
+variable "enable_api_documentation" {
+  description = "Enable API documentation generation"
+  type        = bool
+  default     = true
+}
+
+variable "api_description" {
+  description = "API description for documentation"
+  type        = string
+  default     = "Streaming Platform REST API"
+}
+
+variable "api_version" {
+  description = "API version"
+  type        = string
+  default     = "1.0.0"
+}
+
+# Resource Policy Configuration
+variable "enable_resource_policy" {
+  description = "Enable API Gateway resource policy"
+  type        = bool
+  default     = true
+}
+
+variable "allowed_principals" {
+  description = "List of allowed AWS principals"
+  type        = list(string)
+  default     = []
+}
+
+variable "denied_principals" {
+  description = "List of denied AWS principals"
+  type        = list(string)
+  default     = []
+}
+
+# Client Certificate Configuration
+variable "enable_client_certificate" {
+  description = "Enable client certificate for backend authentication"
+  type        = bool
+  default     = false
+}
+
+variable "client_certificate_description" {
+  description = "Description for client certificate"
+  type        = string
+  default     = "Client certificate for API Gateway backend authentication"
+}
+
+# Canary Deployment Configuration
+variable "enable_canary_deployment" {
+  description = "Enable canary deployment for API Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "canary_traffic_percentage" {
+  description = "Percentage of traffic to route to canary deployment"
+  type        = number
+  default     = 10
+  validation {
+    condition     = var.canary_traffic_percentage >= 0 && var.canary_traffic_percentage <= 100
+    error_message = "Canary traffic percentage must be between 0 and 100."
+  }
+}
+
+# SDK Generation Configuration
+variable "enable_sdk_generation" {
+  description = "Enable SDK generation for API"
+  type        = bool
+  default     = false
+}
+
+variable "sdk_types" {
+  description = "List of SDK types to generate"
+  type        = list(string)
+  default     = ["javascript", "python", "java"]
+  validation {
+    condition = alltrue([
+      for sdk_type in var.sdk_types : contains([
+        "android", "ios", "javascript", "java", "python", "ruby", "go", "csharp"
+      ], sdk_type)
+    ])
+    error_message = "SDK types must be valid API Gateway SDK types."
+  }
+}

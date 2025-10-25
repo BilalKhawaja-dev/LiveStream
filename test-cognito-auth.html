@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cognito Authentication</title>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Test Cognito Authentication</h1>
+    
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="username">Username/Email:</label>
+            <input type="text" id="username" value="test@example.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="TempPassword123!" required>
+        </div>
+        
+        <button type="submit">Test Login</button>
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        // Cognito configuration
+        const poolData = {
+            UserPoolId: 'eu-west-2_XmUEG5naE',
+            ClientId: '4vic7s8v4fqq4jj5cpfj2ri829'
+        };
+        
+        const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+        
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p>Testing authentication...</p>';
+            
+            const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+                Username: username,
+                Password: password
+            });
+            
+            const userData = {
+                Username: username,
+                Pool: userPool
+            };
+            
+            const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+            
+            cognitoUser.authenticateUser(authenticationDetails, {
+                onSuccess: function(result) {
+                    const accessToken = result.getAccessToken().getJwtToken();
+                    const idToken = result.getIdToken().getJwtToken();
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <h3>✅ Authentication Successful!</h3>
+                            <p><strong>Access Token:</strong> ${accessToken.substring(0, 50)}...</p>
+                            <p><strong>ID Token:</strong> ${idToken.substring(0, 50)}...</p>
+                            <p><strong>User:</strong> ${username}</p>
+                        </div>
+                    `;
+                },
+                
+                onFailure: function(err) {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Authentication Failed</h3>
+                            <p><strong>Error:</strong> ${err.message}</p>
+                            <p><strong>Code:</strong> ${err.code}</p>
+                        </div>
+                    `;
+                },
+                
+                newPasswordRequired: function(userAttributes, requiredAttributes) {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>⚠️ New Password Required</h3>
+                            <p>This user needs to set a new password.</p>
+                        </div>
+                    `;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

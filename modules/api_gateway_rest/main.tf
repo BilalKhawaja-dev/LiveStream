@@ -44,22 +44,28 @@ resource "aws_api_gateway_authorizer" "cognito" {
   provider_arns          = [var.cognito_user_pool_arn]
   identity_source        = "method.request.header.Authorization"
   authorizer_credentials = aws_iam_role.api_gateway_authorizer.arn
+  
+  # Enhanced JWT token validation
+  authorizer_result_ttl_in_seconds = var.jwt_authorizer_cache_ttl
 }
 
-# Lambda JWT Authorizer (disabled for now - using Cognito instead)
-# resource "aws_api_gateway_authorizer" "jwt_lambda" {
-#   count = var.jwt_authorizer_function_arn != "" ? 1 : 0
-#
-#   name                   = "${var.project_name}-${var.environment}-jwt-lambda-authorizer"
-#   rest_api_id            = aws_api_gateway_rest_api.main.id
-#   type                   = "TOKEN"
-#   authorizer_uri         = var.jwt_authorizer_function_invoke_arn
-#   authorizer_credentials = aws_iam_role.api_gateway_authorizer.arn
-#   identity_source        = "method.request.header.Authorization"
-#
-#   # Cache settings for performance
-#   authorizer_result_ttl_in_seconds = var.jwt_authorizer_cache_ttl
-# }
+# Lambda JWT Authorizer for enhanced token validation
+resource "aws_api_gateway_authorizer" "jwt_lambda" {
+  count = var.jwt_authorizer_function_arn != "" ? 1 : 0
+
+  name                   = "${var.project_name}-${var.environment}-jwt-lambda-authorizer"
+  rest_api_id            = aws_api_gateway_rest_api.main.id
+  type                   = "TOKEN"
+  authorizer_uri         = var.jwt_authorizer_function_invoke_arn
+  authorizer_credentials = aws_iam_role.api_gateway_authorizer.arn
+  identity_source        = "method.request.header.Authorization"
+
+  # Cache settings for performance
+  authorizer_result_ttl_in_seconds = var.jwt_authorizer_cache_ttl
+  
+  # Enhanced validation settings
+  identity_validation_expression = "^Bearer [-0-9A-Za-z\\.]+$"
+}
 
 # IAM role for API Gateway authorizer
 resource "aws_iam_role" "api_gateway_authorizer" {
@@ -184,7 +190,7 @@ resource "aws_api_gateway_resource" "child" {
   path_part   = each.value.path_part
 }
 
-# Request validators
+# Enhanced request validators with comprehensive validation
 resource "aws_api_gateway_request_validator" "body_validator" {
   name                        = "${var.project_name}-${var.environment}-body-validator"
   rest_api_id                 = aws_api_gateway_rest_api.main.id
@@ -204,6 +210,14 @@ resource "aws_api_gateway_request_validator" "full_validator" {
   rest_api_id                 = aws_api_gateway_rest_api.main.id
   validate_request_body       = true
   validate_request_parameters = true
+}
+
+# Enhanced request validator for strict validation
+resource "aws_api_gateway_request_validator" "strict_validator" {
+  name                        = "${var.project_name}-${var.environment}-strict-validator"
+  rest_api_id                 = aws_api_gateway_rest_api.main.id
+  validate_request_body       = var.enable_request_validation
+  validate_request_parameters = var.enable_request_validation
 }
 
 # Gateway responses for better error handling
@@ -275,8 +289,8 @@ locals {
 resource "aws_api_gateway_method" "options" {
   for_each = toset(local.all_resource_keys)
 
-  rest_api_id = aws_api_gateway_rest_api.main.id
-  resource_id = contains(keys(local.api_resources), each.key) ? aws_api_gateway_resource.parent[each.key].id : aws_api_gateway_resource.child[each.key].id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = contains(keys(local.api_resources), each.key) ? aws_api_gateway_resource.parent[each.key].id : aws_api_gateway_resource.child[each.key].id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
@@ -379,12 +393,12 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.options,
     aws_api_gateway_method_response.options,
     aws_api_gateway_integration_response.options,
-    
+
     # Gateway responses
     aws_api_gateway_gateway_response.unauthorized,
     aws_api_gateway_gateway_response.access_denied,
     aws_api_gateway_gateway_response.throttled,
-    
+
     # Parent resource methods
     aws_api_gateway_method.auth,
     aws_api_gateway_integration.auth,
@@ -401,7 +415,7 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.media,
     aws_api_gateway_integration.media,
     aws_api_gateway_method_response.media,
-    
+
     # Auth endpoints
     aws_api_gateway_method.auth_login,
     aws_api_gateway_integration.auth_login,
@@ -415,7 +429,7 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.auth_logout,
     aws_api_gateway_integration.auth_logout,
     aws_api_gateway_method_response.auth_logout,
-    
+
     # User endpoints
     aws_api_gateway_method.users_profile,
     aws_api_gateway_integration.users_profile,
@@ -426,7 +440,7 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.users_preferences,
     aws_api_gateway_integration.users_preferences,
     aws_api_gateway_method_response.users_preferences,
-    
+
     # Stream endpoints
     aws_api_gateway_method.streams_list,
     aws_api_gateway_integration.streams_list,
@@ -446,18 +460,21 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.streams_metrics,
     aws_api_gateway_integration.streams_metrics,
     aws_api_gateway_method_response.streams_metrics,
-    
+
     # Support endpoints
     aws_api_gateway_method.support_tickets,
     aws_api_gateway_integration.support_tickets,
     aws_api_gateway_method_response.support_tickets,
+    aws_api_gateway_method.support_tickets_post,
+    aws_api_gateway_integration.support_tickets_post,
+    aws_api_gateway_method_response.support_tickets_post,
     aws_api_gateway_method.support_chat,
     aws_api_gateway_integration.support_chat,
     aws_api_gateway_method_response.support_chat,
     aws_api_gateway_method.support_ai,
     aws_api_gateway_integration.support_ai,
     aws_api_gateway_method_response.support_ai,
-    
+
     # Analytics endpoints
     aws_api_gateway_method.analytics_users,
     aws_api_gateway_integration.analytics_users,
@@ -471,7 +488,7 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.analytics_reports,
     aws_api_gateway_integration.analytics_reports,
     aws_api_gateway_method_response.analytics_reports,
-    
+
     # Media endpoints
     aws_api_gateway_method.media_upload,
     aws_api_gateway_integration.media_upload,
@@ -482,13 +499,13 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_method.media_cdn,
     aws_api_gateway_integration.media_cdn,
     aws_api_gateway_method_response.media_cdn,
-    
+
     # Frontend proxy methods and integrations
     aws_api_gateway_method.frontend_proxy,
     aws_api_gateway_integration.frontend_proxy,
     aws_api_gateway_method.frontend_root,
     aws_api_gateway_integration.frontend_root,
-    
+
     # Lambda permissions
     aws_lambda_permission.auth_handler,
     aws_lambda_permission.streaming_handler,
@@ -544,14 +561,33 @@ resource "aws_api_gateway_stage" "main" {
   tags = var.tags
 }
 
-# Usage Plans for rate limiting
+# Enhanced Usage Plans for comprehensive rate limiting
 resource "aws_api_gateway_usage_plan" "basic" {
   name        = "${var.project_name}-${var.environment}-basic-plan"
-  description = "Basic usage plan for authenticated users"
+  description = "Basic usage plan for authenticated users with enhanced rate limiting"
 
   api_stages {
     api_id = aws_api_gateway_rest_api.main.id
     stage  = aws_api_gateway_stage.main.stage_name
+    
+    # Per-method throttling for sensitive endpoints
+    throttle {
+      path        = "/auth/login"
+      rate_limit  = var.basic_plan_rate_limit * 0.1  # 10% of total for login
+      burst_limit = var.basic_plan_burst_limit * 0.1
+    }
+    
+    throttle {
+      path        = "/auth/register"
+      rate_limit  = var.basic_plan_rate_limit * 0.05  # 5% of total for registration
+      burst_limit = var.basic_plan_burst_limit * 0.05
+    }
+    
+    throttle {
+      path        = "/support/tickets"
+      rate_limit  = var.basic_plan_rate_limit * 0.2  # 20% for support tickets
+      burst_limit = var.basic_plan_burst_limit * 0.2
+    }
   }
 
   quota_settings {
@@ -569,11 +605,30 @@ resource "aws_api_gateway_usage_plan" "basic" {
 
 resource "aws_api_gateway_usage_plan" "premium" {
   name        = "${var.project_name}-${var.environment}-premium-plan"
-  description = "Premium usage plan for creators and premium users"
+  description = "Premium usage plan for creators and premium users with enhanced limits"
 
   api_stages {
     api_id = aws_api_gateway_rest_api.main.id
     stage  = aws_api_gateway_stage.main.stage_name
+    
+    # Enhanced throttling for premium users
+    throttle {
+      path        = "/streams/*"
+      rate_limit  = var.premium_plan_rate_limit * 0.4  # 40% for streaming operations
+      burst_limit = var.premium_plan_burst_limit * 0.4
+    }
+    
+    throttle {
+      path        = "/analytics/*"
+      rate_limit  = var.premium_plan_rate_limit * 0.3  # 30% for analytics
+      burst_limit = var.premium_plan_burst_limit * 0.3
+    }
+    
+    throttle {
+      path        = "/media/*"
+      rate_limit  = var.premium_plan_rate_limit * 0.2  # 20% for media operations
+      burst_limit = var.premium_plan_burst_limit * 0.2
+    }
   }
 
   quota_settings {
@@ -1106,6 +1161,38 @@ resource "aws_api_gateway_method_response" "support_tickets" {
   }
 }
 
+# Support tickets POST method for creating tickets
+resource "aws_api_gateway_method" "support_tickets_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.child["support_tickets"].id
+  http_method   = "POST"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
+
+  request_validator_id = aws_api_gateway_request_validator.body_validator.id
+}
+
+resource "aws_api_gateway_integration" "support_tickets_post" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.child["support_tickets"].id
+  http_method = aws_api_gateway_method.support_tickets_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_function_invoke_arns["support_handler"]
+}
+
+resource "aws_api_gateway_method_response" "support_tickets_post" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.child["support_tickets"].id
+  http_method = aws_api_gateway_method.support_tickets_post.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+}
+
 resource "aws_api_gateway_method" "support_chat" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.child["support_chat"].id
@@ -1545,36 +1632,189 @@ resource "aws_api_gateway_method_response" "media" {
   }
 }
 
-# JWT middleware permission (disabled for now)
-# resource "aws_lambda_permission" "jwt_middleware" {
-#   count = var.jwt_authorizer_function_arn != "" ? 1 : 0
-#
-#   statement_id  = "AllowExecutionFromAPIGateway"
-#   action        = "lambda:InvokeFunction"
-#   function_name = var.jwt_authorizer_function_arn
-#   principal     = "apigateway.amazonaws.com"
-#   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-# } # Met
-# Method settings for API Gateway stage
+# JWT middleware permission for enhanced token validation
+resource "aws_lambda_permission" "jwt_middleware" {
+  count = var.jwt_authorizer_function_arn != "" ? 1 : 0
+
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = var.jwt_authorizer_function_arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+# Enhanced IAM role for API Gateway with additional permissions
+resource "aws_iam_role_policy" "api_gateway_enhanced" {
+  name = "${var.project_name}-${var.environment}-api-gateway-enhanced-policy"
+  role = aws_iam_role.api_gateway_authorizer.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:InvokeFunction",
+          "cognito-idp:GetUser",
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:ListUsers"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+} # Met
+# Enhanced method settings for API Gateway stage
 resource "aws_api_gateway_method_settings" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
   stage_name  = aws_api_gateway_stage.main.stage_name
   method_path = "*/*"
 
   settings {
-    # Logging settings
+    # Enhanced logging settings
     logging_level      = var.api_logging_level
     data_trace_enabled = var.environment != "prod"
     metrics_enabled    = true
 
-    # Throttling settings
+    # Enhanced throttling settings
     throttling_rate_limit  = var.throttling_rate_limit
     throttling_burst_limit = var.throttling_burst_limit
 
-    # Caching settings
-    caching_enabled      = var.enable_caching
-    cache_ttl_in_seconds = var.cache_ttl_seconds
+    # Enhanced caching settings
+    caching_enabled                = var.enable_caching
+    cache_ttl_in_seconds          = var.cache_ttl_seconds
+    cache_data_encrypted          = var.enable_api_cache_encryption
+    cache_key_parameters          = ["method.request.header.Authorization"]
+    require_authorization_for_cache_control = true
+    unauthorized_cache_control_header_strategy = "SUCCEED_WITH_RESPONSE_HEADER"
   }
+}
+
+# CloudWatch Alarms for API Gateway monitoring
+resource "aws_cloudwatch_metric_alarm" "api_4xx_errors" {
+  count = var.alarm_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "${var.project_name}-${var.environment}-api-4xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "4XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.api_4xx_error_threshold
+  alarm_description   = "This metric monitors API Gateway 4XX errors"
+  alarm_actions       = [var.alarm_topic_arn]
+
+  dimensions = {
+    ApiName   = aws_api_gateway_rest_api.main.name
+    Stage     = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_5xx_errors" {
+  count = var.alarm_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "${var.project_name}-${var.environment}-api-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.api_5xx_error_threshold
+  alarm_description   = "This metric monitors API Gateway 5XX errors"
+  alarm_actions       = [var.alarm_topic_arn]
+
+  dimensions = {
+    ApiName   = aws_api_gateway_rest_api.main.name
+    Stage     = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_latency" {
+  count = var.alarm_topic_arn != "" ? 1 : 0
+
+  alarm_name          = "${var.project_name}-${var.environment}-api-latency"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Latency"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = var.api_latency_threshold
+  alarm_description   = "This metric monitors API Gateway latency"
+  alarm_actions       = [var.alarm_topic_arn]
+
+  dimensions = {
+    ApiName   = aws_api_gateway_rest_api.main.name
+    Stage     = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+# CloudWatch Dashboard for API Gateway
+resource "aws_cloudwatch_dashboard" "api_gateway" {
+  count = var.enable_api_dashboard ? 1 : 0
+
+  dashboard_name = "${var.project_name}-${var.environment}-api-gateway"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.main.name, "Stage", aws_api_gateway_stage.main.stage_name],
+            [".", "4XXError", ".", ".", ".", "."],
+            [".", "5XXError", ".", ".", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Requests and Errors"
+          period  = 300
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", aws_api_gateway_rest_api.main.name, "Stage", aws_api_gateway_stage.main.stage_name],
+            [".", "IntegrationLatency", ".", ".", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Latency"
+          period  = 300
+        }
+      }
+    ]
+  })
 } # 
 # Frontend proxy integration through API Gateway for SSL termination
 # This allows frontend apps to be accessed via HTTPS through API Gateway
@@ -1635,3 +1875,662 @@ resource "aws_api_gateway_integration" "frontend_root" {
   integration_http_method = "ANY"
   uri                     = "http://${var.alb_dns_name}/"
 }
+
+# Advanced Rate Limiting and Monitoring Features
+
+# WAF Web ACL for API Gateway (if enabled)
+resource "aws_wafv2_web_acl" "api_gateway" {
+  count = var.enable_waf ? 1 : 0
+
+  name  = "${var.project_name}-${var.environment}-api-waf"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  # Rate limiting rule
+  rule {
+    name     = "RateLimitRule"
+    priority = 1
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit                 = var.waf_rate_limit
+        aggregate_key_type    = "IP"
+        evaluation_window_sec = 300
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimitRule"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Geographic restriction rule (if enabled)
+  dynamic "rule" {
+    for_each = var.enable_geo_blocking ? [1] : []
+    content {
+      name     = "GeoBlockRule"
+      priority = 2
+
+      override_action {
+        none {}
+      }
+
+      statement {
+        geo_match_statement {
+          country_codes = var.blocked_countries
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "GeoBlockRule"
+        sampled_requests_enabled   = true
+      }
+
+      action {
+        block {}
+      }
+    }
+  }
+
+  # IP reputation rule
+  rule {
+    name     = "AWSManagedRulesAmazonIpReputationList"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesAmazonIpReputationList"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesAmazonIpReputationList"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Known bad inputs rule
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesKnownBadInputsRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  tags = var.tags
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.project_name}-${var.environment}-api-waf"
+    sampled_requests_enabled   = true
+  }
+}
+
+# Associate WAF with API Gateway
+resource "aws_wafv2_web_acl_association" "api_gateway" {
+  count = var.enable_waf ? 1 : 0
+
+  resource_arn = aws_api_gateway_stage.main.arn
+  web_acl_arn  = aws_wafv2_web_acl.api_gateway[0].arn
+}
+
+# CloudWatch Log Group for WAF
+resource "aws_cloudwatch_log_group" "waf_logs" {
+  count = var.enable_waf ? 1 : 0
+
+  name              = "/aws/wafv2/${var.project_name}-${var.environment}-api-waf"
+  retention_in_days = var.log_retention_days
+
+  tags = var.tags
+}
+
+# WAF Logging Configuration
+resource "aws_wafv2_web_acl_logging_configuration" "api_gateway" {
+  count = var.enable_waf ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.api_gateway[0].arn
+  log_destination_configs = ["${aws_cloudwatch_log_group.waf_logs[0].arn}:*"]
+
+  redacted_fields {
+    single_header {
+      name = "authorization"
+    }
+  }
+
+  redacted_fields {
+    single_header {
+      name = "cookie"
+    }
+  }
+}
+
+# API Gateway Custom Domain (if certificate ARN provided)
+resource "aws_api_gateway_domain_name" "main" {
+  count = var.certificate_arn != "" && var.custom_domain_name != "" ? 1 : 0
+
+  domain_name              = var.custom_domain_name
+  regional_certificate_arn = var.certificate_arn
+
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  security_policy = "TLS_1_2"
+
+  tags = var.tags
+}
+
+# Base path mapping for custom domain
+resource "aws_api_gateway_base_path_mapping" "main" {
+  count = var.certificate_arn != "" && var.custom_domain_name != "" ? 1 : 0
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.main.stage_name
+  domain_name = aws_api_gateway_domain_name.main[0].domain_name
+}
+
+# Client certificate for backend authentication
+resource "aws_api_gateway_client_certificate" "main" {
+  count = var.enable_client_certificate ? 1 : 0
+
+  description = var.client_certificate_description
+  tags        = var.tags
+}
+
+# Canary deployment settings
+resource "aws_api_gateway_stage" "canary" {
+  count = var.enable_canary_deployment ? 1 : 0
+
+  deployment_id = aws_api_gateway_deployment.main.id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  stage_name    = "${var.environment}-canary"
+
+  # Canary settings
+  canary_settings {
+    percent_traffic          = var.canary_traffic_percentage
+    deployment_id           = aws_api_gateway_deployment.main.id
+    stage_variable_overrides = {
+      "canary" = "true"
+    }
+    use_stage_cache = var.enable_caching
+  }
+
+  # Enable X-Ray tracing
+  xray_tracing_enabled = var.enable_xray_tracing
+
+  # Access logging configuration
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      caller         = "$context.identity.caller"
+      user           = "$context.identity.user"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      resourcePath   = "$context.resourcePath"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      error          = "$context.error.message"
+      errorType      = "$context.error.messageString"
+      canary         = "$context.stage"
+    })
+  }
+
+  tags = var.tags
+}_api_gateway_domain_name" "main" {
+  count = var.certificate_arn != "" ? 1 : 0
+
+  domain_name              = var.custom_domain_name
+  regional_certificate_arn = var.certificate_arn
+
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+
+  tags = var.tags
+}
+
+# Base path mapping for custom domain
+resource "aws_api_gateway_base_path_mapping" "main" {
+  count = var.certificate_arn != "" ? 1 : 0
+
+  api_id      = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.main.stage_name
+  domain_name = aws_api_gateway_domain_name.main[0].domain_name
+  base_path   = "api"
+}
+
+# CloudWatch Alarms for API Gateway Monitoring
+resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-api-4xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "4XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.api_4xx_error_threshold
+  alarm_description   = "This metric monitors API Gateway 4XX errors"
+  alarm_actions       = var.alarm_topic_arn != "" ? [var.alarm_topic_arn] : []
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.main.name
+    Stage   = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-api-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.api_5xx_error_threshold
+  alarm_description   = "This metric monitors API Gateway 5XX errors"
+  alarm_actions       = var.alarm_topic_arn != "" ? [var.alarm_topic_arn] : []
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.main.name
+    Stage   = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
+  alarm_name          = "${var.project_name}-${var.environment}-api-latency"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Latency"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = var.api_latency_threshold
+  alarm_description   = "This metric monitors API Gateway latency"
+  alarm_actions       = var.alarm_topic_arn != "" ? [var.alarm_topic_arn] : []
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = aws_api_gateway_rest_api.main.name
+    Stage   = aws_api_gateway_stage.main.stage_name
+  }
+
+  tags = var.tags
+}
+
+# API Gateway Dashboard
+resource "aws_cloudwatch_dashboard" "api_gateway" {
+  count = var.enable_api_dashboard ? 1 : 0
+
+  dashboard_name = "${var.project_name}-${var.environment}-api-gateway"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", aws_api_gateway_rest_api.main.name, "Stage", aws_api_gateway_stage.main.stage_name],
+            [".", "4XXError", ".", ".", ".", "."],
+            [".", "5XXError", ".", ".", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Requests and Errors"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Latency", "ApiName", aws_api_gateway_rest_api.main.name, "Stage", aws_api_gateway_stage.main.stage_name],
+            [".", "IntegrationLatency", ".", ".", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Latency"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "CacheHitCount", "ApiName", aws_api_gateway_rest_api.main.name, "Stage", aws_api_gateway_stage.main.stage_name],
+            [".", "CacheMissCount", ".", ".", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Cache Performance"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "log"
+        x      = 8
+        y      = 6
+        width  = 16
+        height = 6
+
+        properties = {
+          query  = "SOURCE '/aws/apigateway/${var.project_name}-${var.environment}'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100"
+          region = data.aws_region.current.name
+          title  = "Recent API Gateway Errors"
+          view   = "table"
+        }
+      }
+    ]
+  })
+}
+
+# Usage Analytics Lambda Function for detailed API monitoring
+resource "aws_iam_role" "usage_analytics_role" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  name = "${var.project_name}-${var.environment}-usage-analytics-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy" "usage_analytics_policy" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  name = "${var.project_name}-${var.environment}-usage-analytics-policy"
+  role = aws_iam_role.usage_analytics_role[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "apigateway:GET",
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:ListMetrics"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:GetItem"
+        ]
+        Resource = "arn:aws:dynamodb:*:*:table/${var.project_name}-${var.environment}-api-usage"
+      }
+    ]
+  })
+}
+
+# DynamoDB table for API usage tracking
+resource "aws_dynamodb_table" "api_usage" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  name         = "${var.project_name}-${var.environment}-api-usage"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "api_key"
+  range_key    = "timestamp"
+
+  attribute {
+    name = "api_key"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+
+  attribute {
+    name = "endpoint"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "endpoint-timestamp-index"
+    hash_key        = "endpoint"
+    range_key       = "timestamp"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  tags = var.tags
+}
+
+# Lambda function for usage analytics
+resource "aws_lambda_function" "usage_analytics" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  filename         = data.archive_file.usage_analytics_zip[0].output_path
+  function_name    = "${var.project_name}-${var.environment}-usage-analytics"
+  role             = aws_iam_role.usage_analytics_role[0].arn
+  handler          = "index.handler"
+  source_code_hash = data.archive_file.usage_analytics_zip[0].output_base64sha256
+  runtime          = "python3.9"
+  timeout          = 300
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE = var.enable_usage_analytics ? aws_dynamodb_table.api_usage[0].name : ""
+      PROJECT_NAME   = var.project_name
+      ENVIRONMENT    = var.environment
+    }
+  }
+
+  tags = var.tags
+}
+
+# Usage analytics Lambda source code
+resource "local_file" "usage_analytics_source" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  filename = "${path.module}/usage_analytics.py"
+  content  = <<EOF
+import json
+import boto3
+import os
+from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+dynamodb = boto3.resource('dynamodb')
+cloudwatch = boto3.client('cloudwatch')
+apigateway = boto3.client('apigateway')
+
+def handler(event, context):
+    """
+    Analyze API usage patterns and store in DynamoDB
+    """
+    table_name = os.environ['DYNAMODB_TABLE']
+    project_name = os.environ['PROJECT_NAME']
+    environment = os.environ['ENVIRONMENT']
+    
+    table = dynamodb.Table(table_name)
+    
+    try:
+        # Get API usage metrics from CloudWatch
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(hours=1)
+        
+        # Get API Gateway metrics
+        response = cloudwatch.get_metric_statistics(
+            Namespace='AWS/ApiGateway',
+            MetricName='Count',
+            Dimensions=[
+                {
+                    'Name': 'ApiName',
+                    'Value': f'{project_name}-{environment}-api'
+                }
+            ],
+            StartTime=start_time,
+            EndTime=end_time,
+            Period=3600,
+            Statistics=['Sum']
+        )
+        
+        # Store usage data
+        for datapoint in response['Datapoints']:
+            timestamp = datapoint['Timestamp'].isoformat()
+            count = datapoint['Sum']
+            
+            table.put_item(
+                Item={
+                    'api_key': 'aggregate',
+                    'timestamp': timestamp,
+                    'endpoint': 'all',
+                    'request_count': int(count),
+                    'ttl': int((end_time + timedelta(days=30)).timestamp())
+                }
+            )
+        
+        logger.info(f"Processed {len(response['Datapoints'])} usage datapoints")
+        
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'processed_datapoints': len(response['Datapoints'])
+            })
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in usage analytics: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': str(e)})
+        }
+EOF
+}
+
+# Create ZIP file for usage analytics Lambda
+data "archive_file" "usage_analytics_zip" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  type        = "zip"
+  source_file = local_file.usage_analytics_source[0].filename
+  output_path = "${path.module}/usage_analytics.zip"
+
+  depends_on = [local_file.usage_analytics_source]
+}
+
+# CloudWatch Event Rule for usage analytics
+resource "aws_cloudwatch_event_rule" "usage_analytics_schedule" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  name                = "${var.project_name}-${var.environment}-usage-analytics"
+  description         = "Trigger usage analytics collection"
+  schedule_expression = "rate(1 hour)"
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_event_target" "usage_analytics_target" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  rule      = aws_cloudwatch_event_rule.usage_analytics_schedule[0].name
+  target_id = "UsageAnalyticsTarget"
+  arn       = aws_lambda_function.usage_analytics[0].arn
+}
+
+resource "aws_lambda_permission" "allow_cloudwatch_usage_analytics" {
+  count = var.enable_usage_analytics ? 1 : 0
+
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.usage_analytics[0].function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.usage_analytics_schedule[0].arn
+}
+
+# Data sources
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}

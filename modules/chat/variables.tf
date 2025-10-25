@@ -8,10 +8,7 @@ variable "environment" {
   type        = string
 }
 
-variable "lambda_role_arn" {
-  description = "Lambda execution role ARN"
-  type        = string
-}
+
 
 variable "connections_table_name" {
   description = "DynamoDB connections table name"

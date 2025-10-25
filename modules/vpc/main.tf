@@ -378,6 +378,46 @@ resource "aws_vpc_endpoint" "logs" {
   }
 }
 
+# Secrets Manager VPC Endpoint
+resource "aws_vpc_endpoint" "secretsmanager" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${data.aws_region.current.name}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints[0].id]
+  private_dns_enabled = true
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-secretsmanager-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "secretsmanager"
+    ManagedBy   = "terraform"
+  }
+}
+
+# KMS VPC Endpoint
+resource "aws_vpc_endpoint" "kms" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${data.aws_region.current.name}.kms"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints[0].id]
+  private_dns_enabled = true
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-kms-endpoint"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = "kms"
+    ManagedBy   = "terraform"
+  }
+}
+
 # Security Group for VPC Endpoints
 resource "aws_security_group" "vpc_endpoints" {
   count = var.enable_vpc_endpoints ? 1 : 0

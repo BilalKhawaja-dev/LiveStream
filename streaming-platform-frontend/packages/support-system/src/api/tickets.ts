@@ -75,15 +75,15 @@ export const supportAPI = {
       
       const response = await dynamoClient.send(command);
       return response.Items?.map(item => ({
-        id: item.ticket_id?.S || '',
-        userId: item.user_id?.S || '',
+        id: item.ticket_id?.S || ',
+        userId: item.user_id?.S || ',
         type: (item.type?.S as any) || 'general',
-        subject: item.subject?.S || '',
-        description: item.description?.S || '',
+        subject: item.subject?.S || ',
+        description: item.description?.S || ',
         status: (item.status?.S as any) || 'open',
         priority: (item.priority?.S as any) || 'medium',
-        createdAt: new Date(item.created_at?.S || ''),
-        updatedAt: new Date(item.updated_at?.S || ''),
+        createdAt: new Date(item.created_at?.S || '),
+        updatedAt: new Date(item.updated_at?.S || '),
         assignedTo: item.assigned_to?.S
       })) || [];
     } catch (error) {

@@ -52,8 +52,8 @@ import {
   CalendarIcon,
 } from '@heroicons/react/24/outline';
 import { Line, Bar } from 'react-chartjs-2';
-import { useAuth } from '@streaming/auth';
-import { useGlobalStore } from '@streaming/shared';
+import { useAuth } from '../../stubs/auth';
+import { useGlobalStore } from '../../stubs/shared';
 
 interface RevenueStream {
   id: string;

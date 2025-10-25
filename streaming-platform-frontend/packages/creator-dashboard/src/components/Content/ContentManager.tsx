@@ -59,8 +59,8 @@ import {
   VideoCameraIcon,
   DocumentIcon,
 } from '@heroicons/react/24/outline';
-import { useAuth } from '@streaming/auth';
-import { useGlobalStore } from '@streaming/shared';
+import { useAuth } from '../../stubs/auth';
+import { useGlobalStore } from '../../stubs/shared';
 
 interface ContentItem {
   id: string;
@@ -133,7 +133,7 @@ export const ContentManager: React.FC = () => {
   const { isOpen: isEditModalOpen, onOpen: openEditModal, onClose: closeEditModal } = useDisclosure();
   const { isOpen: isUploadModalOpen, onOpen: openUploadModal, onClose: closeUploadModal } = useDisclosure();
   
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
@@ -214,12 +214,12 @@ export const ContentManager: React.FC = () => {
   });
   
   const [editForm, setEditForm] = useState({
-    title: '',
-    description: '',
-    category: '',
-    tags: '',
+    title: ',
+    description: ',
+    category: ',
+    tags: ',
     visibility: 'public' as const,
-    scheduledAt: '',
+    scheduledAt: ',
   });
 
   const bg = useColorModeValue('white', 'gray.800');
@@ -234,7 +234,7 @@ export const ContentManager: React.FC = () => {
         category: selectedContent.category,
         tags: selectedContent.tags.join(', '),
         visibility: selectedContent.visibility,
-        scheduledAt: selectedContent.scheduledAt?.toISOString().slice(0, 16) || '',
+        scheduledAt: selectedContent.scheduledAt?.toISOString().slice(0, 16) || ',
       });
     }
   }, [selectedContent]);
@@ -288,7 +288,7 @@ export const ContentManager: React.FC = () => {
       });
     } catch (error) {
       // Use secure logging to prevent log injection
-      import('@streaming/shared').then(({ secureLogger }) => {
+      import('../../stubs/shared').then(({ secureLogger }) => {
         secureLogger.error('Error deleting content', error, { 
           component: 'ContentManager',
           action: 'deleteContent' 
@@ -337,7 +337,7 @@ export const ContentManager: React.FC = () => {
       });
     } catch (error) {
       // Use secure logging to prevent log injection
-      import('@streaming/shared').then(({ secureLogger }) => {
+      import('../../stubs/shared').then(({ secureLogger }) => {
         secureLogger.error('Error updating content', error, { 
           component: 'ContentManager',
           action: 'updateContent' 
@@ -369,7 +369,7 @@ export const ContentManager: React.FC = () => {
       });
     } catch (error) {
       // Use secure logging to prevent log injection
-      import('@streaming/shared').then(({ secureLogger }) => {
+      import('../../stubs/shared').then(({ secureLogger }) => {
         secureLogger.error('Error updating visibility', error, { 
           component: 'ContentManager',
           action: 'updateVisibility' 

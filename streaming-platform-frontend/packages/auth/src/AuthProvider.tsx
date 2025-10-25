@@ -41,15 +41,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check for existing session
     const checkAuth = async () => {
       try {
-        // Mock user for development
-        setUser({
-          id: '1',
-          username: 'testuser',
-          email: 'test@example.com',
-          role: 'creator',
-          displayName: 'Test User',
-          subscriptionTier: 'gold',
-        });
+        // TODO: Replace with real Cognito integration
+        // For now, check localStorage for existing session
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
       } catch (error) {
         // Use secure logging to prevent log injection
         console.error('Auth check failed:', error);
@@ -61,18 +58,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, _password: string) => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login
-      setUser({
-        id: '1',
-        username: 'testuser',
-        email,
-        role: 'creator',
-        displayName: 'Test User',
-        subscriptionTier: 'gold',
+      // Call the backend API for authentication
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: email, password }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
+      }
+
+      const authData = await response.json();
+      
+      // Store tokens
+      localStorage.setItem('accessToken', authData.access_token);
+      localStorage.setItem('refreshToken', authData.refresh_token);
+      
+      // Create user object from auth data
+      const user: User = {
+        id: authData.user?.id || email,
+        username: authData.user?.username || email,
+        email: authData.user?.email || email,
+        role: authData.user?.role || 'viewer',
+        displayName: authData.user?.displayName || email,
+        subscriptionTier: authData.user?.subscription_tier || 'bronze',
+      };
+      
+      setUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
     } catch (error) {
       // Use secure logging to prevent log injection
       console.error('Login failed:', error);
@@ -82,8 +102,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        // Call logout endpoint
+        await fetch(`${process.env.REACT_APP_API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ access_token: accessToken }),
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local storage
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('currentUser');
+      setUser(null);
+    }
   };
 
   const hasSubscription = (tier: string): boolean => {

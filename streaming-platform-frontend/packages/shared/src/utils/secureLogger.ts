@@ -10,6 +10,16 @@ interface LogContext {
   timestamp?: string;
   providedValue?: any;
   key?: string;
+  sourceService?: string;
+  serviceName?: string;
+  from?: string;
+  to?: string;
+  context?: any;
+  contextKeys?: string[];
+  error?: any;
+  authenticated?: boolean;
+  hasContext?: boolean;
+  path?: string;
 }
 
 class SecureLogger {

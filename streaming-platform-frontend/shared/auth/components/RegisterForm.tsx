@@ -23,10 +23,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     subscriptionTier: 'bronze',
     acceptTerms: false
   });
-  const [formErrors, setFormErrors] = useState<Partial<RegisterFormData>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const validateForm = (): boolean => {
-    const errors: Partial<RegisterFormData> = {};
+    const errors: Record<string, string> = {};
 
     // Username validation
     if (!formData.username.trim()) {

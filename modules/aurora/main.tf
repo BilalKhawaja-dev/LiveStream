@@ -87,7 +87,7 @@ resource "aws_secretsmanager_secret_version" "aurora_master" {
 resource "aws_rds_cluster" "aurora" {
 
   cluster_identifier = "${var.project_name}-${var.environment}-aurora-cluster-${random_id.aurora_suffix.hex}"
-  engine             = "aurora-mysql"
+  engine             = "aurora-postgresql"
   engine_version     = var.engine_version
   engine_mode        = "provisioned"
   database_name      = var.database_name
@@ -520,10 +520,13 @@ resource "aws_lambda_function" "db_init" {
   timeout       = 300
   memory_size   = 256
 
+  # Add shared dependencies layer if provided
+  layers = var.shared_dependencies_layer_arn != "" ? [var.shared_dependencies_layer_arn] : []
+
   environment {
     variables = {
       DB_HOST    = local.cluster_endpoint
-      DB_PORT    = "3306"
+      DB_PORT    = "5432"
       DB_NAME    = var.database_name
       SECRET_ARN = aws_secretsmanager_secret.aurora_master.arn
     }

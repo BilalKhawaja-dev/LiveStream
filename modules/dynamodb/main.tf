@@ -1015,3 +1015,92 @@ resource "aws_dynamodb_table" "streams" {
     Name = "${var.project_name}-${var.environment}-streams"
   }
 }
+
+resource "aws_dynamodb_table" "videos" {
+  name         = "${var.project_name}-${var.environment}-videos"
+  billing_mode = var.billing_mode
+  hash_key     = "video_id"
+  range_key    = "user_id"
+
+  attribute {
+    name = "video_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "status"
+    type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "UserVideosIndex"
+    hash_key        = "user_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "StatusIndex"
+    hash_key        = "status"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-videos"
+  }
+}
+
+resource "aws_dynamodb_table" "moderation" {
+  name         = "${var.project_name}-${var.environment}-moderation"
+  billing_mode = var.billing_mode
+  hash_key     = "moderation_id"
+
+  attribute {
+    name = "moderation_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "status"
+    type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "S"
+  }
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  global_secondary_index {
+    name            = "StatusIndex"
+    hash_key        = "status"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  global_secondary_index {
+    name            = "UserModerationIndex"
+    hash_key        = "user_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-moderation"
+  }
+}

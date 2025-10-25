@@ -1,16 +1,14 @@
 {
   "name": "@streaming/developer-console",
   "version": "1.0.0",
-  "description": "Developer console for system monitoring and debugging",
+  "description": "developer-console application",
   "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
-    "type-check": "tsc --noEmit",
-    "docker:build": "docker build -t developer-console .",
-    "docker:push": "docker push developer-console"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -23,9 +21,7 @@
     "react-chartjs-2": "^5.2.0",
     "chart.js": "^4.4.0",
     "react-router-dom": "^6.15.0",
-    "@streaming/shared": "file:../shared",
-    "@streaming/ui": "file:../ui",
-    "@streaming/auth": "file:../auth"
+    "zustand": "^4.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

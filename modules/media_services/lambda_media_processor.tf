@@ -153,7 +153,7 @@ resource "aws_lambda_permission" "media_processor_s3" {
 # Pre-signed URL generator Lambda
 resource "aws_lambda_function" "presigned_url_generator" {
   filename      = "${path.module}/functions/presigned_url_generator.zip"
-  function_name = "${var.project_name}-${var.environment}-presigned-url-generator"
+  function_name = "${var.project_name}-${var.environment}-media-presigned-url-generator"
   role          = aws_iam_role.presigned_url_generator.arn
   handler       = "presigned_url_generator.lambda_handler"
   runtime       = "python3.9"
@@ -186,7 +186,7 @@ data "archive_file" "presigned_url_generator" {
 
 # IAM role for presigned URL generator
 resource "aws_iam_role" "presigned_url_generator" {
-  name = "${var.project_name}-${var.environment}-presigned-url-generator-role"
+  name = "${var.project_name}-${var.environment}-media-presigned-url-generator-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -211,7 +211,7 @@ resource "aws_iam_role_policy_attachment" "presigned_url_generator_basic" {
 
 # S3 permissions for presigned URL generator
 resource "aws_iam_role_policy" "presigned_url_generator_s3" {
-  name = "${var.project_name}-${var.environment}-presigned-url-generator-s3-policy"
+  name = "${var.project_name}-${var.environment}-media-presigned-url-generator-s3-policy"
   role = aws_iam_role.presigned_url_generator.id
 
   policy = jsonencode({
@@ -231,7 +231,7 @@ resource "aws_iam_role_policy" "presigned_url_generator_s3" {
 
 # CloudWatch log group for presigned URL generator
 resource "aws_cloudwatch_log_group" "presigned_url_generator" {
-  name              = "/aws/lambda/${var.project_name}-${var.environment}-presigned-url-generator"
+  name              = "/aws/lambda/${var.project_name}-${var.environment}-media-presigned-url-generator"
   retention_in_days = var.log_retention_days
 
   tags = var.tags

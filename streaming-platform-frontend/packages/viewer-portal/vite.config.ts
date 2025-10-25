@@ -4,8 +4,10 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/viewer-portal/',
   resolve: {
     alias: {
+      '@streaming-platform/shared': resolve(__dirname, '../../shared'),
       '@streaming/shared': resolve(__dirname, '../shared/src'),
       '@streaming/ui': resolve(__dirname, '../ui/src'),
       '@streaming/auth': resolve(__dirname, '../auth/src'),

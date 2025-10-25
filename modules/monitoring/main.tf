@@ -1697,3 +1697,570 @@ resource "aws_cloudwatch_log_group" "logs_cleanup_logs" {
     Type        = "cleanup"
   }
 }
+
+# ECS and Application Monitoring Dashboard
+resource "aws_cloudwatch_dashboard" "ecs_application_monitoring" {
+  dashboard_name = "${var.project_name}-${var.environment}-ecs-applications"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "${var.project_name}-${var.environment}-viewer-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-creator-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-admin-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-support-system", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-analytics-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-developer-console", "ClusterName", "${var.project_name}-${var.environment}-cluster"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "ECS Service CPU Utilization"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ECS", "MemoryUtilization", "ServiceName", "${var.project_name}-${var.environment}-viewer-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-creator-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-admin-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-support-system", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-analytics-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-developer-console", "ClusterName", "${var.project_name}-${var.environment}-cluster"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "ECS Service Memory Utilization"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_name],
+            [".", "TargetResponseTime", ".", "."],
+            [".", "HTTPCode_Target_2XX_Count", ".", "."],
+            [".", "HTTPCode_Target_4XX_Count", ".", "."],
+            [".", "HTTPCode_Target_5XX_Count", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Application Load Balancer Metrics"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 8
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ECS", "RunningTaskCount", "ServiceName", "${var.project_name}-${var.environment}-viewer-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-creator-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-admin-portal", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-support-system", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-analytics-dashboard", "ClusterName", "${var.project_name}-${var.environment}-cluster"],
+            [".", ".", "ServiceName", "${var.project_name}-${var.environment}-developer-console", "ClusterName", "${var.project_name}-${var.environment}-cluster"]
+          ]
+          view    = "timeSeries"
+          stacked = true
+          region  = data.aws_region.current.name
+          title   = "ECS Running Task Count"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 16
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGateway", "Count", "ApiName", "${var.project_name}-${var.environment}-api"],
+            [".", "Latency", ".", "."],
+            [".", "4XXError", ".", "."],
+            [".", "5XXError", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "API Gateway Performance"
+          period  = 300
+          stat    = "Sum"
+        }
+      }
+    ]
+  })
+}
+
+# Lambda Functions Monitoring Dashboard
+resource "aws_cloudwatch_dashboard" "lambda_monitoring" {
+  dashboard_name = "${var.project_name}-${var.environment}-lambda-functions"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Lambda", "Invocations", "FunctionName", "${var.project_name}-${var.environment}-auth-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-streaming-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-support-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-analytics-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-payment-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-moderation-handler"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Lambda Function Invocations"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Lambda", "Duration", "FunctionName", "${var.project_name}-${var.environment}-auth-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-streaming-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-support-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-analytics-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-payment-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-moderation-handler"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Lambda Function Duration"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Lambda", "Errors", "FunctionName", "${var.project_name}-${var.environment}-auth-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-streaming-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-support-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-analytics-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-payment-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-moderation-handler"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Lambda Function Errors"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 6
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Lambda", "Throttles", "FunctionName", "${var.project_name}-${var.environment}-auth-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-streaming-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-support-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-analytics-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-payment-handler"],
+            [".", ".", "FunctionName", "${var.project_name}-${var.environment}-moderation-handler"]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Lambda Function Throttles"
+          period  = 300
+          stat    = "Sum"
+        }
+      }
+    ]
+  })
+}
+
+# Streaming and Media Services Dashboard
+resource "aws_cloudwatch_dashboard" "streaming_media_monitoring" {
+  dashboard_name = "${var.project_name}-${var.environment}-streaming-media"
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        x      = 0
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/MediaLive", "ActiveInputs", "ChannelId", var.medialive_channel_id],
+            [".", "OutputMinutes", ".", "."],
+            [".", "NetworkIn", ".", "."],
+            [".", "NetworkOut", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "MediaLive Channel Metrics"
+          period  = 300
+          stat    = "Average"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 12
+        y      = 0
+        width  = 12
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/S3", "BucketSizeBytes", "BucketName", var.s3_media_bucket_name, "StorageType", "StandardStorage"],
+            [".", "NumberOfObjects", ".", ".", ".", "AllStorageTypes"],
+            ["AWS/CloudFront", "Requests", "DistributionId", var.cloudfront_distribution_id],
+            [".", "BytesDownloaded", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Media Storage and CDN Metrics"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 0
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/DynamoDB", "ConsumedReadCapacityUnits", "TableName", "${var.project_name}-${var.environment}-chat-messages"],
+            [".", "ConsumedWriteCapacityUnits", ".", "."],
+            [".", "ItemCount", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Chat System DynamoDB Metrics"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 8
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/ApiGatewayV2", "Count", "ApiId", var.websocket_api_id],
+            [".", "ConnectCount", ".", "."],
+            [".", "MessageCount", ".", "."],
+            [".", "ClientError", ".", "."],
+            [".", "ExecutionError", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "WebSocket API Metrics"
+          period  = 300
+          stat    = "Sum"
+        }
+      },
+      {
+        type   = "metric"
+        x      = 16
+        y      = 6
+        width  = 8
+        height = 6
+
+        properties = {
+          metrics = [
+            ["AWS/Cognito", "SignInSuccesses", "UserPool", var.cognito_user_pool_id],
+            [".", "SignInThrottles", ".", "."],
+            [".", "TokenRefreshSuccesses", ".", "."],
+            [".", "FederationSuccesses", ".", "."]
+          ]
+          view    = "timeSeries"
+          stacked = false
+          region  = data.aws_region.current.name
+          title   = "Cognito Authentication Metrics"
+          period  = 300
+          stat    = "Sum"
+        }
+      }
+    ]
+  })
+}
+
+# CloudWatch Alarms for Critical Services
+resource "aws_cloudwatch_metric_alarm" "ecs_high_cpu" {
+  for_each = toset([
+    "viewer-portal",
+    "creator-dashboard",
+    "admin-portal",
+    "support-system",
+    "analytics-dashboard",
+    "developer-console"
+  ])
+
+  alarm_name          = "${var.project_name}-${var.environment}-${each.key}-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors ECS service CPU utilization for ${each.key}"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  ok_actions          = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ServiceName = "${var.project_name}-${var.environment}-${each.key}"
+    ClusterName = "${var.project_name}-${var.environment}-cluster"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-${each.key}-high-cpu-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = each.key
+    Type        = "performance-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "ecs_high_memory" {
+  for_each = toset([
+    "viewer-portal",
+    "creator-dashboard",
+    "admin-portal",
+    "support-system",
+    "analytics-dashboard",
+    "developer-console"
+  ])
+
+  alarm_name          = "${var.project_name}-${var.environment}-${each.key}-high-memory"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "85"
+  alarm_description   = "This metric monitors ECS service memory utilization for ${each.key}"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  ok_actions          = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ServiceName = "${var.project_name}-${var.environment}-${each.key}"
+    ClusterName = "${var.project_name}-${var.environment}-cluster"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-${each.key}-high-memory-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Service     = each.key
+    Type        = "performance-alarm"
+  }
+}
+
+# Lambda Function Error Alarms
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  for_each = toset([
+    "auth-handler",
+    "streaming-handler",
+    "support-handler",
+    "analytics-handler",
+    "payment-handler",
+    "moderation-handler"
+  ])
+
+  alarm_name          = "${var.project_name}-${var.environment}-${each.key}-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors Lambda function errors for ${each.key}"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = "${var.project_name}-${var.environment}-${each.key}"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-${each.key}-errors-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Function    = each.key
+    Type        = "error-alarm"
+  }
+}
+
+# API Gateway High Error Rate Alarm
+resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-api-4xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "4XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "20"
+  alarm_description   = "This metric monitors API Gateway 4XX errors"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = "${var.project_name}-${var.environment}-api"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-api-4xx-errors-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Type        = "api-error-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
+  alarm_name          = "${var.project_name}-${var.environment}-api-5xx-errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "5XXError"
+  namespace           = "AWS/ApiGateway"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "5"
+  alarm_description   = "This metric monitors API Gateway 5XX errors"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ApiName = "${var.project_name}-${var.environment}-api"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-api-5xx-errors-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Type        = "api-error-alarm"
+  }
+}
+
+# Database Connection Alarm
+resource "aws_cloudwatch_metric_alarm" "aurora_high_connections" {
+  alarm_name          = "${var.project_name}-${var.environment}-aurora-high-connections"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "2"
+  metric_name         = "DatabaseConnections"
+  namespace           = "AWS/RDS"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "80"
+  alarm_description   = "This metric monitors Aurora database connections"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    DBClusterIdentifier = var.aurora_cluster_id
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-aurora-high-connections-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Type        = "database-alarm"
+  }
+}
+
+# DynamoDB Throttling Alarm
+resource "aws_cloudwatch_metric_alarm" "dynamodb_throttles" {
+  alarm_name          = "${var.project_name}-${var.environment}-dynamodb-throttles"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ThrottledRequests"
+  namespace           = "AWS/DynamoDB"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = "0"
+  alarm_description   = "This metric monitors DynamoDB throttling"
+  alarm_actions       = [aws_sns_topic.cost_alerts.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TableName = "${var.project_name}-${var.environment}-chat-messages"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-dynamodb-throttles-alarm"
+    Environment = var.environment
+    Project     = var.project_name
+    Type        = "database-alarm"
+  }
+}

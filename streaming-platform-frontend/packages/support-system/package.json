@@ -1,16 +1,14 @@
 {
   "name": "@streaming/support-system",
   "version": "1.0.0",
-  "description": "AI-powered support system with smart filtering",
+  "description": "support-system application",
   "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
-    "type-check": "tsc --noEmit",
-    "docker:build": "docker build -t support-system .",
-    "docker:push": "docker push support-system"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -20,10 +18,10 @@
     "@emotion/styled": "^11.11.0",
     "framer-motion": "^10.16.4",
     "@heroicons/react": "^2.0.18",
+    "react-chartjs-2": "^5.2.0",
+    "chart.js": "^4.4.0",
     "react-router-dom": "^6.15.0",
-    "@streaming/shared": "file:../shared",
-    "@streaming/ui": "file:../ui",
-    "@streaming/auth": "file:../auth"
+    "zustand": "^4.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
